@@ -1,0 +1,32 @@
+# Node / client build
+node_modules/
+client/node_modules/
+dist/
+client/dist/
+coverage/
+*.tsbuildinfo
+
+# Python / relay
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Relay runtime state (NEVER commit mailbox blobs, tokens, or limiter files)
+relay/state/
+relay/mailboxes/
+relay/data/
+*.token
+
+# Secrets - belt and suspenders (nothing sensitive should ever be here)
+*.env
+.env*
+*.key
+*.pem
+*credential*
+*secret*
+
+# OS / editor
+.DS_Store
+*.swp

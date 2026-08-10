@@ -1,0 +1,580 @@
+/*
+ * Keyweave UI tokens and layout.
+ *
+ * NO @font-face and NO @import of a URL, ever. "This app contacts no external origin" is
+ * a security property of a pairing ceremony, and a webfont request is a third-party
+ * beacon fired at the exact moment two people are authenticating each other. Inter is
+ * used only if the reader already has it installed; otherwise the platform font renders
+ * and nothing is fetched.
+ *
+ * Dark first because the sender is an emissive screen in a room with another person, and
+ * a light page at full brightness is what makes a QR bloom in the other camera. The light
+ * scheme is supported, not preferred.
+ */
+
+:root {
+  --bg: #0f172a;
+  --surface: #10192e;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #ffffff;
+  --muted: #94a3b8;
+  --primary: #1e3a5f;
+  --accent: #22c55e;
+  --danger: #dc2626;
+
+  --radius: 12px;
+  --gap: 16px;
+  --tap: 44px;
+  --maxw: 34rem;
+
+  --font: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: rgba(15, 23, 42, 0.14);
+    --text: #0f172a;
+    --muted: #475569;
+    --primary: #1e3a5f;
+    --accent: #15803d;
+    --danger: #b91c1c;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * The UA stylesheet's `[hidden] { display: none }` loses to any author rule that sets
+ * display, and several below do (.btn, .field, .busy are all flex). Without this, hiding
+ * the retry button or the busy indicator by setting `hidden` has no visible effect at all,
+ * which on the unlock screen means a spinner that never goes away. The !important is the
+ * point of the rule, not a shortcut around specificity.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 20px 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 620;
+  letter-spacing: 0.01em;
+}
+
+.steps {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sprite {
+  display: none;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: currentColor;
+}
+
+.screens {
+  display: block;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.25;
+  font-weight: 650;
+}
+
+.title-danger {
+  color: var(--danger);
+}
+
+.lede {
+  margin: 0;
+  color: var(--text);
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.hint-quiet {
+  font-size: 0.85rem;
+}
+
+.fineprint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* The R1 sentence. Quiet, always legible, never dismissible. */
+.tcb {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.notice,
+.error,
+.warn {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.95rem;
+}
+
+.error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.warn {
+  border-color: var(--accent);
+}
+
+/* Forms */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.input {
+  flex: 1 1 auto;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+}
+
+/* Buttons. Every one of them clears the 44px target on both axes. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-quiet {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-icon {
+  padding: 10px;
+  flex: none;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/*
+ * The two verdict buttons are deliberately identical. Styling "match" as the happy path
+ * would be a design nudge on the one decision in this product that must not be nudged.
+ */
+.verdict {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-verdict {
+  min-height: 64px;
+  text-align: center;
+  font-weight: 620;
+}
+
+@media (max-width: 26rem) {
+  .verdict {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Ceremony surfaces */
+
+.qr-wrap,
+.video-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #ffffff;
+}
+
+.video-wrap {
+  background: #000000;
+  padding: 0;
+  overflow: hidden;
+}
+
+.qr {
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  image-rendering: pixelated;
+  background: #ffffff;
+}
+
+.video {
+  width: 100%;
+  max-height: 60vh;
+  display: block;
+  object-fit: cover;
+  background: #000000;
+}
+
+.words {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: word;
+}
+
+.words li {
+  counter-increment: word;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+.words li::before {
+  content: counter(word);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The conversation. Sender and time are carried by ALIGNMENT (received on the left, sent on
+ * the right), PROXIMITY (2px inside a run by one sender, a full gap between runs) and a
+ * shared shape, so nothing needs a "from" label on every line. The time and the delivery
+ * state print once per run, at the end of it, where a reader looks for them.
+ */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.msg-in {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.msg-out {
+  align-self: flex-end;
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+/* First of a run keeps its full corner; the gap above it is what separates the runs. */
+.msg-start {
+  margin-top: var(--gap);
+}
+
+.msg-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg-meta {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * --muted on the sent bubble is a light grey on a dark blue that is legible in the dark
+ * scheme and thin in the light one, so the sent meta gets its own value rather than the
+ * token. It is the same near-white in both schemes because the bubble is too.
+ */
+.msg-out .msg-meta {
+  color: #cbd5e1;
+}
+
+.textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.subhead {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 620;
+  color: var(--muted);
+}
+
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font-size: 0.9rem;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.mono {
+  font-family: var(--mono);
+  word-break: break-all;
+}
+
+.busy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Accessibility */
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * The QR animation is FUNCTIONAL, not decorative: the frames carry the payload, so frame
+ * advance keeps running here. What is dropped is easing, transitions and the spinner
+ * rotation, which carry no information.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .spinner {
+    animation: none;
+    border-top-color: var(--accent);
+  }
+}
+
+/*
+ * More contrast, per scheme. These values MUST be scoped: a near-white --muted and a
+ * white-alpha --border are the dark-scheme answer, and this block sits after the light
+ * block, so an unscoped version wins the cascade under light and drops #cbd5e1 onto
+ * #f8fafc at about 1.4:1. That is worse than the default it replaces, for exactly the
+ * readers who asked for more contrast, and it hits the R1 trust banner and the "Stop
+ * pairing" escape hatch along with everything else that is var(--muted).
+ *
+ * Computed against the scheme backgrounds: #cbd5e1 on #0f172a is about 12:1, #334155 on
+ * #f8fafc is about 9.9:1. Both clear the 7:1 this media query is asking for.
+ */
+@media (prefers-contrast: more) {
+  :root {
+    --border: rgba(255, 255, 255, 0.35);
+    --muted: #cbd5e1;
+  }
+
+  /* Dark-first like the tokens above, so the light arm has to be written out. */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --border: rgba(15, 23, 42, 0.5);
+      --muted: #334155;
+    }
+  }
+}

@@ -1,0 +1,55 @@
+Keyweave
+Copyright (c) 2026 MacadamiaButter (LocalFirstLab)
+
+This product includes / will include third-party software:
+
+- decimen-optical-transfer (https://github.com/bashalarmistalt/decimen-optical-transfer)
+  MIT License, Copyright (c) 2026 Evan Crawley (Bash Alarmist). Vendored 2026-08-08 at
+  f0c49e92d50366c6867759800dd962b70d840a1a under client/vendor/decimen/ with its LICENSE
+  preserved verbatim. Full upstream history was reviewed before vendoring and its
+  transitive dependencies were audited at that commit. The vendored subset, the exact
+  upstream paths, and every local modification are recorded in
+  client/vendor/decimen/PROVENANCE.md. The pin is fixed: upstream main is not tracked, and
+  a re-vendor is a fresh full-history audit.
+
+- @noble/curves, @noble/ciphers, @noble/hashes (https://github.com/paulmillr/noble-*)
+  MIT License. Used for Ed25519, X25519, XChaCha20-Poly1305, HKDF, Argon2id where
+  the platform WebCrypto does not natively cover the primitive. External audit of
+  record: Cure53, September 2024, at v1.6.0 (scope includes ed25519 and X25519);
+  later versions are self-audited. Version-precise claims only.
+
+- zxing-wasm 2.2.4 (https://github.com/Sec-ant/zxing-wasm)
+  MIT License, Copyright (c) 2023 Ze-Zheng Wu. The JavaScript wrapper around the QR
+  decoder. Its published tarball ships exactly one license file, that MIT text, and it
+  covers the wrapper only.
+
+- zxing-cpp (https://github.com/zxing-cpp/zxing-cpp), bundled inside zxing-wasm
+  Apache License 2.0. zxing-wasm's dist/reader/zxing_reader.wasm is compiled from
+  zxing-cpp at commit fba4e9503fee4518ca2e89510baeea9bcc36dc8d, recorded in zxing-wasm's
+  dist/es/share.js. It ships in the Keyweave scan bundle. A full copy of the Apache
+  License 2.0 is included at LICENSES/Apache-2.0.txt, which satisfies section 4(a).
+  Upstream zxing-cpp has no NOTICE file, so section 4(d) imposes nothing further. The
+  Apache text is absent from the npm tarball and from the wasm binary, so including it
+  here is an obligation that installing the package does not discharge for us.
+  zint (BSD-3-Clause) is a writer-side dependency and is absent from the reader build
+  Keyweave imports; taking the writer or full build would add that attribution.
+
+- qrcode 1.5.4 (https://github.com/soldair/node-qrcode)
+  MIT License. QR symbol generation on the sender side. Its browser entry point reaches
+  one runtime transitive dependency, dijkstrajs 1.0.3 (MIT).
+
+- cbor2 2.3.0 (https://github.com/hildjj/cbor2)
+  MIT License. Deterministic CBOR encoding and strict decoding. It is not a peripheral
+  dependency: every wire and at-rest structure in Keyweave goes through it, including the
+  signed contact card, the mailbox coordinate, the sealed envelope and the vault blob, so
+  the bytes a signature covers are the bytes this library produced.
+
+- @cto.af/wtf8 0.0.5 (https://github.com/hildjj/wtf8)
+  MIT License. cbor2's sole runtime dependency, and it does ship: cbor2's encoder and its
+  type table both import it at module scope, so it is not tree-shaken away, and the built
+  bundle contains it. Listed separately rather than folded into the line above because an
+  attribution that names only the direct dependency understates what is being distributed.
+
+Keyweave does not stamp a blanket SPDX identifier onto built artifacts: the bundle carries
+Apache-2.0 material alongside MIT, and a single MIT banner over both would misstate the
+license of the decoder.

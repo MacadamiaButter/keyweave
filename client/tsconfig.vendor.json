@@ -1,0 +1,17 @@
+{
+  // Typecheck scope for the vendored decimen files that src/ does not import yet.
+  // frame.ts, fountain.ts and frame-capacity.ts already ride in via src/optical.ts and
+  // the root tsconfig; the rest are for the browser UI work package and would otherwise
+  // sit unchecked until then.
+  //
+  // receive-worker.ts and wasm-url.ts are deliberately absent: they resolve
+  // `zxing-wasm/reader/zxing_reader.wasm?url`, a bundler-time import that tsc cannot
+  // resolve without vite/client ambient types. They are checked by the bundler when the
+  // UI lands, not here.
+  "extends": "./tsconfig.json",
+  "include": [
+    "vendor/decimen/qr-raster.ts",
+    "vendor/decimen/platform.ts",
+    "vendor/decimen/worker-pool.ts"
+  ]
+}

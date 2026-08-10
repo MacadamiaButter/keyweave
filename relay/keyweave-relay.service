@@ -1,0 +1,66 @@
+# Keyweave mailbox relay: hardened systemd unit (owner-run install).
+# Least privilege: dedicated dynamic user, loopback only, read-only system.
+# The relay holds no tokens itself (capabilities are per-mailbox, minted on
+# demand), so there is nothing to LoadCredential.
+[Unit]
+Description=Keyweave mailbox relay (loopback, behind nginx)
+Documentation=https://github.com/<your-account>/keyweave
+After=network.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=keyweave-relay
+StateDirectoryMode=0700
+ConfigurationDirectory=keyweave-relay
+ExecStart=/usr/bin/python3 /opt/keyweave-relay/keyweave_relay.py \
+    --config /etc/keyweave-relay/relay.conf serve
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Resource walls: thread-per-connection with request_queue_size=128, so cap
+# threads (tasks) and file descriptors. nginx's limit_conn in front makes these
+# rarely load-bearing, but they must exist independently of nginx.
+TasksMax=64
+LimitNOFILE=1024
+# Explicit journald budget for THIS unit, pinned so a stricter system-wide
+# journald.conf cannot silently shrink it. fail2ban reads this unit's journal;
+# the relay's own disk-persisted per-(source,mailbox) auth-failure cap keeps
+# real volume far below this, so AUTHFAIL lines are never the messages journald
+# drops. Two walls, different mechanisms.
+LogRateLimitIntervalSec=30
+LogRateLimitBurst=10000
+
+# Sandboxing
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+UMask=0077
+CapabilityBoundingSet=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Network: loopback only. The relay never initiates outbound connections.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target

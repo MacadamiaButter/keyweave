@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      GENERATED, NOT WRITTEN. The content below is filled in by vite from
+      build-config.mjs (transformIndexHtml in vite.config.ts), in `vite dev` as well as in
+      a production build. Do not paste a policy here by hand: the same one value also
+      builds the response header documented in docs/DEPLOY-CSP.md and the RelayClient base
+      URL in src/ui/main.ts, and a hand-edit here is exactly how those three stop agreeing.
+      To see what a given deployment gets:  node scripts/print-csp.mjs [relay-origin]
+
+      R13 closure, half one. 'wasm-unsafe-eval' is not optional: without it
+      WebAssembly.instantiate is blocked, the QR decoder never starts, and nothing in the
+      UI would know why. The other half is the build assertion in
+      test/build-no-external-origin.test.ts, which fails closed if any http(s) origin
+      other than the configured relay survives in dist/.
+
+      Two directives here are IGNORED in a meta tag by specification (frame-ancestors and
+      form-action need a real response header). They are written here anyway so this file
+      and the header documented in docs/DEPLOY-CSP.md are one string, diffable by eye. The
+      header is where they bite.
+
+      Deliberately absent: 'unsafe-inline' anywhere, any data: source except none at all,
+      and any external origin. font-src 'none' is redundant under default-src 'none' and
+      is written out because "this app fetches no webfont" is a security property, not a
+      styling choice: a font request during a pairing ceremony is a third-party beacon.
+
+      TIGHTENED past the baseline, each on evidence from the emitted bundle rather than on
+      hope, and each re-checked by test/build-no-external-origin.test.ts:
+        - no blob: in script-src or worker-src. Both workers are built as ES modules and
+          load from /assets/*.js, and dist/ contains no createObjectURL at all, so nothing
+          would use it. The test fails if an object URL ever appears.
+        - no blob: or data: in connect-src. The only fetch this app makes is emscripten
+          pulling the same-origin wasm asset.
+        - no data: or blob: in img-src. Assets are never inlined (assetsInlineLimit 0) and
+          the QR is painted into a canvas, never loaded as an image.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="__KEYWEAVE_CSP__" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Keyweave</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <!--
+      SVG sprite. Icons are symbols in this document, never emoji and never a font: an
+      emoji renders as somebody else's glyph and a font is an external fetch. No xmlns
+      attribute is needed because the HTML parser already puts these in the SVG namespace,
+      which also keeps the w3.org namespace URL out of the bundle.
+    -->
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-eye" viewBox="0 0 24 24">
+        <path
+          d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-eye-off" viewBox="0 0 24 24">
+        <path
+          d="M4 4l16 16M2 12s3.6-6.5 10-6.5c1.7 0 3.2.5 4.5 1.1M22 12s-1.6 2.9-4.7 4.7c-1.5.9-3.3 1.3-5.3 1.3-1 0-2-.1-2.8-.4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path
+          d="M12 3l7 3v5.5c0 4.3-2.9 8-7 9.5-4.1-1.5-7-5.2-7-9.5V6l7-3Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+      </symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24">
+        <path
+          d="M3 8h4l1.5-2h7L17 8h4v11H3V8Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+        <circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-screen" viewBox="0 0 24 24">
+        <rect
+          x="3"
+          y="4"
+          width="18"
+          height="13"
+          rx="1.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        />
+        <path d="M8 21h8" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-message" viewBox="0 0 24 24">
+        <path
+          d="M4 5h16v11H9l-5 4V5Z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24">
+        <path
+          d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4h-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+        />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path
+          d="M4 12.5l5.2 5L20 6.5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        />
+      </symbol>
+    </svg>
+
+    <div class="app" id="app">
+      <header class="topbar">
+        <span class="wordmark">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield" /></svg>
+          Keyweave
+        </span>
+        <span class="steps" id="steps" hidden></span>
+      </header>
+
+      <!--
+        The one sentence R1 gets in the product, not only in the docs. It is visible on
+        every ceremony screen because that is when it is actionable.
+      -->
+      <p class="tcb" id="tcb" hidden>
+        Keyweave is a web page, so the server that sent it is part of what you are
+        trusting: a tampered copy of this app could show both of you matching words that
+        mean nothing. Say the words out loud, face to face, and stop if they differ.
+      </p>
+
+      <main class="screens" id="screens">
+        <noscript>
+          <p class="notice">
+            Keyweave runs entirely in your browser and needs JavaScript enabled. It sends
+            nothing to a server while you pair.
+          </p>
+        </noscript>
+      </main>
+
+      <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+    </div>
+
+    <template id="screen-unlock">
+      <section class="screen" aria-labelledby="unlock-title">
+        <h1 id="unlock-title" class="title" tabindex="-1" data-role="title">Unlock Keyweave</h1>
+        <p class="lede" data-role="lede"></p>
+
+        <!--
+          Why the idle lock sent you back here. Separate from the error slot below because
+          a lock is not a failure, and separate from the storage-failure wording because
+          naming the wrong cause is the one thing a screen in this product must not do.
+        -->
+        <p class="notice" data-role="notice" hidden></p>
+
+        <form class="form" data-role="form" novalidate>
+          <div class="field">
+            <label class="label" for="passphrase">Passphrase</label>
+            <div class="input-row">
+              <input
+                class="input"
+                id="passphrase"
+                name="passphrase"
+                type="password"
+                autocomplete="current-password"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                required
+              />
+              <button
+                class="btn btn-icon"
+                type="button"
+                data-role="reveal"
+                aria-pressed="false"
+                aria-label="Show passphrase"
+              >
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-eye" /></svg>
+              </button>
+            </div>
+            <p class="hint" data-role="hint" id="passphrase-hint"></p>
+          </div>
+
+          <div class="field" data-role="confirm-field" hidden>
+            <label class="label" for="passphrase-confirm">Repeat the passphrase</label>
+            <input
+              class="input"
+              id="passphrase-confirm"
+              name="passphrase-confirm"
+              type="password"
+              autocomplete="new-password"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <p class="error" data-role="error" hidden></p>
+
+          <button class="btn btn-primary" type="submit" data-role="submit">Unlock</button>
+        </form>
+
+        <div class="busy" data-role="busy" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          <span data-role="busy-text"></span>
+        </div>
+
+        <p class="fineprint">
+          Your keys live in this browser, wrapped with this passphrase. There is no account
+          and no recovery: if you forget it, the vault stays shut.
+        </p>
+      </section>
+    </template>
+
+    <template id="screen-ready">
+      <section class="screen" aria-labelledby="ready-title">
+        <h1 id="ready-title" class="title" tabindex="-1">Pair in person</h1>
+        <p class="lede">
+          Keyweave pairs two devices that are in the same room, by showing a moving code on
+          one screen and reading it with the other camera.
+        </p>
+        <p class="lede">
+          That is the whole authentication: a camera pointed at a screen has no network
+          path for anyone else to sit in the middle of. Pairing over a call or a photo does
+          not give you this, so do not do it.
+        </p>
+
+        <div class="choices">
+          <button class="btn btn-primary btn-block" type="button" data-role="show-first">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-screen" /></svg>
+            I show my code first
+          </button>
+          <button class="btn btn-block" type="button" data-role="scan-first">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-camera" /></svg>
+            They show theirs first
+          </button>
+        </div>
+        <p class="fineprint">
+          Decide out loud who goes first. You will each take three turns.
+        </p>
+        <p class="fineprint" data-role="identity"></p>
+
+        <!--
+          The way back into a conversation after a reload. Without it the only route to
+          messaging would be the screen at the end of a ceremony, which is a route that
+          exists once.
+        -->
+        <div class="contacts" data-role="contacts" hidden>
+          <h2 class="subhead">People you have paired with</h2>
+          <ul class="contact-list" data-role="contact-list"></ul>
+        </div>
+      </section>
+    </template>
+
+    <template id="tpl-contact">
+      <li class="contact">
+        <button class="btn btn-block" type="button" data-role="open">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-message" /></svg>
+          <span data-role="label"></span>
+        </button>
+      </li>
+    </template>
+
+    <template id="screen-show">
+      <section class="screen" aria-labelledby="show-title">
+        <h1 id="show-title" class="title" tabindex="-1" data-role="title">Show this to their camera</h1>
+        <p class="lede" data-role="lede"></p>
+        <div class="qr-wrap">
+          <canvas class="qr" data-role="canvas" width="512" height="512" role="img"></canvas>
+        </div>
+        <p class="hint" data-role="status"></p>
+        <button class="btn btn-primary btn-block" type="button" data-role="done">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+          They have it
+        </button>
+        <button class="btn btn-quiet btn-block" type="button" data-role="cancel">
+          Stop pairing
+        </button>
+      </section>
+    </template>
+
+    <template id="screen-scan">
+      <section class="screen" aria-labelledby="scan-title">
+        <h1 id="scan-title" class="title" tabindex="-1" data-role="title">Point your camera at their screen</h1>
+        <p class="lede" data-role="lede"></p>
+        <div class="video-wrap">
+          <video class="video" data-role="video" muted playsinline></video>
+        </div>
+        <p class="hint" data-role="progress"></p>
+        <p class="hint hint-quiet" data-role="counters"></p>
+        <p class="hint hint-quiet" data-role="camera-note"></p>
+        <p class="error" data-role="error" hidden></p>
+        <button class="btn btn-primary btn-block" type="button" data-role="retry" hidden>
+          Ask for the camera again
+        </button>
+        <button class="btn btn-quiet btn-block" type="button" data-role="cancel">
+          Stop pairing
+        </button>
+      </section>
+    </template>
+
+    <template id="screen-compare">
+      <section class="screen" aria-labelledby="compare-title">
+        <h1 id="compare-title" class="title" tabindex="-1">Say these six words out loud</h1>
+        <p class="lede">
+          Both screens should show the same six words in the same order. Read them to each
+          other. This comparison is the trust decision: everything Keyweave does later
+          rests on it.
+        </p>
+        <p class="warn" data-role="supersede" hidden></p>
+        <ol class="words" data-role="words"></ol>
+        <p class="lede">
+          If even one word differs, someone may be sitting between you. Say no.
+        </p>
+        <div class="verdict">
+          <button class="btn btn-verdict" type="button" data-role="match">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+            The words match
+          </button>
+          <button class="btn btn-verdict" type="button" data-role="mismatch">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-stop" /></svg>
+            They do not match
+          </button>
+        </div>
+      </section>
+    </template>
+
+    <template id="screen-paired">
+      <section class="screen" aria-labelledby="paired-title">
+        <h1 id="paired-title" class="title" tabindex="-1">Paired</h1>
+        <p class="lede" data-role="lede"></p>
+        <dl class="facts">
+          <dt>Their identity key</dt>
+          <dd class="mono" data-role="identity"></dd>
+          <dt>Card serial</dt>
+          <dd class="mono" data-role="serial"></dd>
+        </dl>
+        <button class="btn btn-primary btn-block" type="button" data-role="message">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-message" /></svg>
+          Open the conversation
+        </button>
+        <!--
+          Shown when only one of the two devices managed to reserve a drop box, so messaging
+          has nowhere to put anything. Half a pairing is not offered as a half conversation.
+        -->
+        <p class="notice" data-role="no-mailbox" hidden></p>
+        <p class="fineprint" data-role="metadata"></p>
+        <button class="btn btn-quiet btn-block" type="button" data-role="again">
+          Pair with someone else
+        </button>
+      </section>
+    </template>
+
+    <template id="screen-conversation">
+      <section class="screen" aria-labelledby="conversation-title">
+        <h1 id="conversation-title" class="title" tabindex="-1">Conversation</h1>
+        <p class="lede" data-role="peer"></p>
+        <p class="notice" data-role="unavailable" hidden></p>
+
+        <!--
+          Newest at the bottom, like every conversation anyone has ever read. Sender and time
+          are carried by alignment and grouping rather than by a label on every line, and the
+          time only appears where a run of messages ends.
+        -->
+        <ol class="thread" data-role="thread"></ol>
+        <p class="hint" data-role="empty" hidden></p>
+        <p class="error" data-role="error" hidden></p>
+
+        <form class="form" data-role="form" novalidate>
+          <div class="field">
+            <label class="label" for="message-body">Message</label>
+            <textarea
+              class="input textarea"
+              id="message-body"
+              name="message-body"
+              rows="3"
+              autocapitalize="sentences"
+              autocorrect="on"
+              spellcheck="true"
+            ></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit" data-role="send">Send</button>
+        </form>
+
+        <button class="btn btn-block" type="button" data-role="refresh">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-refresh" /></svg>
+          Check for new messages
+        </button>
+        <p class="hint hint-quiet" data-role="status"></p>
+
+        <p class="fineprint" data-role="delivery-note"></p>
+        <p class="fineprint" data-role="metadata-note"></p>
+        <p class="fineprint" data-role="forward-note"></p>
+
+        <button class="btn btn-quiet btn-block" type="button" data-role="back">
+          Back
+        </button>
+      </section>
+    </template>
+
+    <template id="tpl-message">
+      <li class="msg">
+        <p class="msg-body" data-role="body"></p>
+        <p class="msg-meta" data-role="meta"></p>
+      </li>
+    </template>
+
+    <template id="screen-refused">
+      <section class="screen" aria-labelledby="refused-title">
+        <h1 id="refused-title" class="title title-danger" tabindex="-1" data-role="title">Pairing refused</h1>
+        <p class="lede" data-role="detail"></p>
+        <p class="lede" data-role="advice"></p>
+        <button class="btn btn-block" type="button" data-role="again">Start over</button>
+      </section>
+    </template>
+
+    <script type="module" src="/src/ui/main.ts"></script>
+  </body>
+</html>
