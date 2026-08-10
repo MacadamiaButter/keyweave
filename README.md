@@ -27,7 +27,8 @@ Keyweave aims to be honest about its limits. In plain terms:
   address), forward secrecy (a later key compromise can decrypt past messages), or a
   compromised/stolen unlocked device.
 
-The threat model, named residuals, and the full protocol are in `docs/`.
+The threat model, the named residuals, and the design spec that fixes the wire format
+are in `docs/`.
 
 ## Status
 
@@ -51,8 +52,12 @@ light two screens at the same time in front of two people; that is what R15 stil
   pairing crypto, message sealing, the encrypted local vault, and the pairing app in
   `client/src/ui/`.
 - `relay/` - the store-and-forward mailbox relay (Python, standard library).
-- `docs/` - architecture, protocol, threat model, named residuals, the hardened
-  design spec, and the deploy CSP.
+- `scripts/` - `reproduce.sh`, which rebuilds the client from a git ref and prints
+  the artifact hashes. See "Verifying a release" below.
+- `docs/` - `ARCHITECTURE.md` (the map), `keyweave-v0-hardened-spec.md` (the design
+  review this version was built against, and the build contract), `THREAT-MODEL.md`,
+  `NAMED-RESIDUALS.md` (the limits, numbered, with what would close each one),
+  `REPRODUCIBLE-BUILD.md`, `DEPLOY.md` and `DEPLOY-CSP.md`.
 
 ## Running the client
 
@@ -68,6 +73,30 @@ The camera needs a secure context, so pairing works on `localhost` or over HTTPS
 nowhere else. There is no CI runner in this repository: `npm test` run by whoever
 touches the code is what "enforced" means, and it includes the build-time assertion
 that no external origin survives in `dist/`.
+
+## Verifying a release
+
+A release publishes the sha256 of every file in the built bundle so that they can be
+checked rather than taken on trust. `scripts/reproduce.sh` clones this repository at a
+git ref, installs the committed lockfile with `npm ci` into a fresh directory, builds,
+and prints the hash of every file it produced:
+
+```sh
+# the release body names the value KEYWEAVE_RELAY_ORIGIN was built with
+KEYWEAVE_RELAY_ORIGIN=<value from the release body> scripts/reproduce.sh v0.1.0
+```
+
+The hashes are a function of the commit AND of that variable, which is baked into the
+bundle, so the script refuses to guess one: either pass the origin the release names, or
+pass `KEYWEAVE_SAME_ORIGIN=1` to build a same-origin bundle on purpose. Expect that one to
+disagree with the release, and expect several files to match anyway, because not every file
+carries the relay location: a partial match means a different build input, not a modified
+source. Compare the whole printed block against the release body, and verify the tag
+signature on refs that carry one.
+
+`docs/REPRODUCIBLE-BUILD.md` is the longer version: what a matching hash does and does
+not prove, how to check the signature and against which key, and which corroborations
+have actually been run rather than planned.
 
 ## License
 

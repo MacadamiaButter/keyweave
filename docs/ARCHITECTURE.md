@@ -26,12 +26,14 @@ sign-then-encrypt seal, replay defense, at-rest vault, relay hardening) are in
 
 ## Components
 
-- `client/` - TypeScript browser client. Key management (non-extractable WebCrypto
-  Ed25519 + X25519 where available, @noble fallback), deterministic-CBOR contact
-  cards with strict validation, SAS-with-DH pairing, sign-then-encrypt message seal,
-  strict CBOR decode + replay high-water-mark, and an encrypted local vault. The
-  relay client (`src/relay-client.ts`) and the messaging layer (`src/messaging.ts`)
-  sit on top, both written against a relay that lies.
+- `client/` - TypeScript browser client. Key management (Ed25519 + X25519 imported
+  into non-extractable WebCrypto CryptoKeys where available, @noble fallback; the
+  seeds themselves are the stored secret, see R20 in `NAMED-RESIDUALS.md`),
+  deterministic-CBOR contact cards with strict validation, SAS-with-DH pairing,
+  sign-then-encrypt message seal, strict CBOR decode + replay high-water-mark, and
+  an encrypted local vault. The relay client (`src/relay-client.ts`) and the
+  messaging layer (`src/messaging.ts`) sit on top, both written against a relay
+  that lies.
 - Mailbox coordinates are exchanged OPTICALLY, inside the ceremony, one mailbox per
   pairing per direction, signed by the identity key that ceremony pins. The card
   stays what it was: one artifact per identity, with no per-pairing state in it.

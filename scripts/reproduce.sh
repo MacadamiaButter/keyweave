@@ -3,12 +3,18 @@
 #
 # The point is not that this script is trustworthy. It is that anyone can run it, on their
 # own machine, against the public source, and compare what comes out with the hashes in the
-# signed release. If those disagree, either the release is not built from the source it
-# claims, or their toolchain differs. Both are worth knowing and neither is discoverable by
-# reading the served page.
+# published release for that ref. If those disagree, either the release is not built from the
+# source it claims, or their toolchain differs. Both are worth knowing and neither is
+# discoverable by reading the served page. A release body is protected by account control
+# alone, so where a ref's tag is signed that signature is the stronger anchor;
+# docs/REPRODUCIBLE-BUILD.md names the command that checks one and which refs carry one.
 #
-# Usage:  scripts/reproduce.sh [git-ref] [output-dir]
-#         scripts/reproduce.sh v0.1.0
+# Usage:  KEYWEAVE_RELAY_ORIGIN=https://relay.example scripts/reproduce.sh [ref] [out-dir]
+#         KEYWEAVE_SAME_ORIGIN=1 scripts/reproduce.sh [ref] [out-dir]
+#
+# One of those two is required, and the refusal below says why. The release body for a ref
+# names the value its own hashes were built with. KEYWEAVE_SAME_ORIGIN takes 1, true or yes
+# and nothing else; any other value is refused by name rather than interpreted.
 #
 # Requires: git, node, npm, and either sha256sum or shasum. Network access to the npm
 # registry for `npm ci`.
@@ -57,6 +63,58 @@ else
   exit 1
 fi
 
+# THE VALUE IS READ, NOT MERELY COUNTED. The first version of this asked only whether
+# KEYWEAVE_SAME_ORIGIN was non-empty, which means somebody who set it to 0 meaning "no" got a
+# same-origin bundle: the exact opposite of what they asked for, silently, and then a hash
+# mismatch they would read as tampering. So the accepted values are named, and anything else
+# is refused BY NAME rather than guessed at in either direction. `tr` rather than bash 4's
+# ${var,,} because the second machine this has to run on is a Mac, where bash is 3.2.
+SAME_ORIGIN_RAW="${KEYWEAVE_SAME_ORIGIN:-}"
+SAME_ORIGIN=no
+if [ -n "${SAME_ORIGIN_RAW}" ]; then
+  case "$(printf '%s' "${SAME_ORIGIN_RAW}" | tr '[:upper:]' '[:lower:]')" in
+    1 | true | yes) SAME_ORIGIN=yes ;;
+    *)
+      echo "STOP: KEYWEAVE_SAME_ORIGIN is set to '${SAME_ORIGIN_RAW}', which this script does" >&2
+      echo "      not accept. It takes 1, true or yes, in any case, and nothing else." >&2
+      echo "      To ask for a relay on its own origin, unset KEYWEAVE_SAME_ORIGIN entirely" >&2
+      echo "      and set KEYWEAVE_RELAY_ORIGIN instead. A value like 0 is refused here rather" >&2
+      echo "      than read as a yes or dropped as a no, because either reading silently" >&2
+      echo "      builds a bundle you did not ask for and the hashes are what tell you." >&2
+      exit 2
+      ;;
+  esac
+fi
+
+# THE SAME-ORIGIN CHOICE IS THE CALLER'S, NEVER A DEFAULT. Omitting the variable built a
+# DIFFERENT bundle and exited 0. Four of the six hashes still matched the release, because
+# four of the files do not carry the relay location, so the run presented as "two files were
+# tampered with": the one conclusion this script exists to keep anybody from reaching by
+# accident. A trailing slash in the value already fails loudly further down, and this is the
+# same refusal one step earlier, for the case where nothing was said at all.
+if [ -n "${RELAY_ORIGIN}" ] && [ "${SAME_ORIGIN}" = yes ]; then
+  echo "STOP: KEYWEAVE_RELAY_ORIGIN and KEYWEAVE_SAME_ORIGIN are both set and they ask for" >&2
+  echo "      different bundles. Unset one." >&2
+  exit 2
+fi
+if [ -z "${RELAY_ORIGIN}" ] && [ "${SAME_ORIGIN}" = no ]; then
+  cat >&2 <<'CHOOSE'
+STOP: no relay location was chosen, and the artifact hashes depend on it.
+
+  KEYWEAVE_RELAY_ORIGIN=https://relay.example  builds against a relay on its own origin. A
+                                               release names the value its hashes were built
+                                               with; pass that value to compare against it.
+  KEYWEAVE_SAME_ORIGIN=1                       builds a same-origin bundle on purpose. Its
+                                               hashes will not match a release that names an
+                                               origin, and that is a different build input
+                                               rather than a modified source.
+
+Either is accepted on a ref that predates the variable: the build-inputs block then reports
+that it was not an input at all.
+CHOOSE
+  exit 2
+fi
+
 echo "keyweave reproduce"
 echo "  source ref : ${REF}"
 echo "  work dir   : ${OUT}"
@@ -68,7 +126,7 @@ echo "  hasher     : ${HASHER}"
 if [ -n "${RELAY_ORIGIN}" ]; then
   echo "  relay      : KEYWEAVE_RELAY_ORIGIN=${RELAY_ORIGIN} (requested)"
 else
-  echo "  relay      : KEYWEAVE_RELAY_ORIGIN unset (same-origin relay)"
+  echo "  relay      : same-origin build, chosen with KEYWEAVE_SAME_ORIGIN"
 fi
 echo
 
@@ -104,7 +162,14 @@ cd "${OUT}/src/client"
 
 # `npm ci`, never `npm install`: ci installs exactly the committed lockfile and fails if
 # package.json and the lockfile disagree, which is the property being relied on here.
-npm ci --no-audit --no-fund --silent
+#
+# NOT `--silent`, and that is measured rather than argued: with no reachable registry the
+# silent form exited 1 having printed nothing beyond this script's own header, naming no
+# cause and not even mentioning the debug log npm had just written. A verifier who cannot see
+# why the install failed cannot tell a blocked network from a lockfile that disagrees with
+# package.json, and one of those two is a finding about the release. `npm run build` below
+# keeps its flag: there the failure comes from a child process that writes its own errors.
+npm ci --no-audit --no-fund
 # Exported explicitly rather than inherited, so the value in the block below is provably the
 # value the build saw. An invalid one aborts here, before anything is emitted.
 KEYWEAVE_RELAY_ORIGIN="${RELAY_ORIGIN}" npm run build --silent
@@ -132,9 +197,13 @@ find . -type f | sort | while read -r f; do
 done
 
 echo
-echo "Compare these against the signed release for this ref."
-echo "They are published OUT OF BAND, never by the host that serves the app: a server that"
-echo "can serve you a modified bundle can serve you a matching hash beside it."
+echo "Compare these against the published release for this ref, and verify that ref's tag"
+echo "signature where the ref carries one. Tags before v0.1.1 are unsigned and stay unsigned,"
+echo "so on those git verify-tag exits 1 reporting no signature found: that is the expected"
+echo "absence and not a finding. The release hashes are published OUT OF BAND, never by the"
+echo "host that serves the app: a server that can serve you a modified bundle can serve you a"
+echo "matching hash beside it. docs/REPRODUCIBLE-BUILD.md names the command that checks a tag"
+echo "signature, the key to check it against, and which refs carry one."
 echo
 echo "Quote the WHOLE block. The hashes are a function of the commit AND the build inputs"
 echo "above; a release that publishes hashes without KEYWEAVE_RELAY_ORIGIN cannot be"

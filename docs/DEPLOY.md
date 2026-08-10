@@ -5,18 +5,23 @@
 Two conditions before any of this runs against a public host. Both are now met; what remains
 is not a gate but a build, named at the bottom of this section.
 
-1. **The build-host condition.** The released artifact must be built either in a clean
-   environment that does not have to trust the current build host, or on a build host with no
-   UNATTENDED path to root. A container on the same host does not count: its daemon is root on
+1. **The build-host condition.** The released artifact must be built in
+   a clean environment that does not have to trust the current build host, OR that condition
+   must be closed first. A container on the same host does not count: its daemon is root on
    the very machine whose group membership is the hole. Status, in two parts:
-   - **Independent corroboration: DONE.** The same commit was built on one x86_64 Linux host and one
-     arm64 macOS host, with node and npm pinned to the same versions, and
-     all six artifact hashes agreed byte for byte. So the artifact is demonstrably not a
-     function of one build host. See `REPRODUCIBLE-BUILD.md`.
-   - **The build host: SATISFIED, negative control OBSERVED.** The build user was removed from
-     `docker` and `lxd` in `/etc/group` (both member lists now empty). Because a login session
-     keeps the group set it started with, the file edit alone was NOT closure; the machine was
-     rebooted, and in a fresh session all three checks pass:
+   - **Independent corroboration: DONE at a pre-release revision, NOT yet re-run at the
+     tag.** The same source was built on an x86_64 Linux host and on an arm64 macOS host,
+     sharing no operating system, no CPU architecture and no administrative domain, and all
+     six artifact hashes agreed byte for byte. So the artifact is demonstrably not a
+     function of one build host. That run predates `v0.1.0`: at the tag only build host A
+     has attested, which is what the published release body says, and re-running host B at
+     the tag is the remaining work named at the end of this section. See
+     `REPRODUCIBLE-BUILD.md`.
+   - **The build-host condition itself: CLOSED 2026-08-09, negative control OBSERVED.** The
+     build user was removed from the container-daemon groups in `/etc/group` (both member
+     lists now empty). Because a login session keeps the group set it started with, the file
+     edit alone was NOT closure; the machine has since rebooted, and in a fresh session all
+     three checks pass:
 
      ```
      id -nG | tr ' ' '\n' | grep -E '^(docker|lxd)$'  -> no match
@@ -37,10 +42,10 @@ is not a gate but a build, named at the bottom of this section.
 
 So no gate remains. What remains is building the release at the ACTUAL tag rather than at
 whatever was current when this paragraph was written, and re-running WP8's cross-machine hash
-comparison at that tag. WP8 has changed character: while H1 was open it was the only defensible
-answer to "can you trust this build host", and now it is corroboration on top of a host with no
-unattended root path. Everything below was staged ahead of this moment so the work is reading
-and pasting rather than designing under pressure.
+comparison at that tag. WP8 has changed character: while the build-host condition was open it
+was the only defensible answer to "can you trust this build host", and now it is corroboration
+on top of a host with no unattended root path. Everything below was staged ahead of this moment
+so the work is reading and pasting rather than designing under pressure.
 
 **Why every paste block asserts before it acts.** On 2026-08-05 a long nginx header line
 wrapped when pasted into a terminal, `nginx -t` accepted the multi-line quoted string, and
@@ -52,12 +57,19 @@ short pieces, and the verification lives inside the same block as the action.
 ## Topology: two trust domains, deliberately
 
     app bundle   keyweave.localfirstlab.org        the EXISTING VPS 178.104.41.74
-    relay        relay.keyweave.localfirstlab.org  a NEW, separate box (different provider region)
+    relay        relay.keyweave.localfirstlab.org  a NEW, separate box (same provider, other region)
 
 They must not share a host. Finding 8 of the design review: one root over both makes
 "compromise the relay gives you ciphertext only" false, because the same root serves the
 JavaScript that holds the keys. Co-locating is acceptable only for a private preview, and
 then the threat model has to say so out loud.
+
+**The separation is of hosts and roots, not of providers.** Both boxes are rented from the same
+company, in different regions, so a party who can compel or compromise that provider reaches
+both. That is a weaker claim than "two trust domains" sounds, and it is stated here rather than
+left for a reader to work out. What the split does buy is real: a root on either machine does
+not become a root on the other, which is the failure finding 8 names. Moving the relay to an
+unrelated provider would close the rest and is worth doing before this is relied on.
 
 **Which way round, and why, because an earlier version of this table had it backwards.** The
 RELAY is the LOW-value target: it holds opaque ciphertext, it is assumed hostile by the design,
@@ -78,9 +90,13 @@ Two things killed Pages. It cannot send any response header, so part of the poli
 not exist there (detailed below). And serving the app from GitHub while the verification hashes
 live in a GitHub release collapses them into ONE root, which is precisely what
 `REPRODUCIBLE-BUILD.md` forbids: the party serving you the bytes must not also be the party
-attesting to them. That second argument holds only because commit and tag signing are OFF in
-this estate; a GPG-signed tag would make the owner's key the anchor rather than GitHub, and the
-argument would have to be remade.
+attesting to them. From v0.1.1 the release tag is signed with a release-signing key that is
+separate from any personal key and is published on `localfirstlab.org`, so what anchors the
+hashes is a key rather than a GitHub account: taking the account no longer lets someone rewrite
+what the tag attests to. `REPRODUCIBLE-BUILD.md` gives the fingerprint, where to fetch the key,
+and the verify command. That strengthens the release side and it does not revive Pages, because
+the argument above never rested on the anchor. It rests on one party serving the bytes while
+hosting the attestation, which stays true however well the tag is signed.
 
 A CDN was considered and rejected separately: edge compute is the most capable possible party
 for R1's targeted per-user code swap, and features like Rocket Loader or Auto Minify REWRITE
@@ -96,8 +112,9 @@ is a step that cannot be run, and a runbook whose gate is unreachable is a runbo
 gets dropped.
 
 Pages is otherwise a good fit for the reasons that draft gave: a different operator from the
-VPS, already in the integrity story as where signed release hashes live, and no application
-layer to compromise. What it costs is exact and worth stating rather than papering over.
+VPS, already in the integrity story as where the signed tag and its hashes live (checking that
+signature is the procedure in `REPRODUCIBLE-BUILD.md`), and no application layer to compromise.
+What it costs is exact and worth stating rather than papering over.
 
 **What is lost when the CSP exists only as the `<meta>` tag in the page:**
 
@@ -320,8 +337,12 @@ not state the value is not verifiable, because a reproducer using a different on
 different bytes and cannot tell that from tampering. Put the value in the release body next
 to the hashes: see `REPRODUCIBLE-BUILD.md`.
 
-Publish the hashes in the signed release FIRST, and only then upload. Publishing the hash
-after the bytes are live inverts the point of it.
+Publish the hashes FIRST, and only then upload. Publishing the hash after the bytes are live
+inverts the point of it. From `v0.1.1` the hashes go in the ANNOTATED TAG MESSAGE, because that
+is what the signature covers; the GitHub release body carries the same block as a readable copy
+and stays editable by whoever holds the account. `REPRODUCIBLE-BUILD.md` carries the key
+fingerprint, the address to fetch the key from, and the `git verify-tag` invocation. Tags before
+`v0.1.1` are unsigned and stay that way.
 
 ## Step 5b: the app host's response headers, IF the host can send them
 
@@ -426,8 +447,12 @@ you MEANT to deploy and what is actually being served has somewhere to show up. 
 check runs first and exits: if the artifact is the wrong one, whether the header agrees with
 it is not the interesting question.
 
-Then fetch each artifact, hash it, and compare with the signed release. This is the step
-that checks the deploy rather than the build, and it is the one most easily skipped.
+Then fetch each artifact, hash it, and compare with the hashes in the signed tag message,
+having first checked that tag's signature by the procedure in `REPRODUCIBLE-BUILD.md`.
+Comparing against a release body nobody verified only proves the deploy matches whatever the
+release says today.
+This is the step that checks the deploy rather than the build, and it is the one most easily
+skipped.
 
 ## What is deliberately not here
 

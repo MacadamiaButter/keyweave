@@ -14,14 +14,18 @@ identical fabricated safety words on both screens and defeat pairing with no vis
 symptom.
 
 Mitigations (defense in depth, none a full solution): a strict Content-Security-Policy
-with no external origins and no inline script; long-term keys generated as
-non-extractable WebCrypto keys so a later-served bundle can only use them while
-resident, not exfiltrate them; build artifacts published with hashes **out of band**
-(signed release on a trust domain independent of the serving host) so a diligent user
-can compare the exact bytes their browser received; and, later, a browser extension
-that installs reviewed code rather than re-fetching it per load. Real update
-transparency requires an out-of-band monitor, which a server that discriminates per
-user can still evade.
+with no external origins and no inline script; long-term keys are held as
+non-extractable WebCrypto CryptoKeys where the runtime provides Secure Curves, which
+denies a later-served bundle the live key handle but **not** the seed that handle was
+imported from, so this narrows the attack rather than closing it (see R20); build
+artifacts published with hashes **out of band** (on a trust domain independent of
+the serving host, and from v0.1.1 inside a signed tag message rather than only in an
+editable release body; `docs/REPRODUCIBLE-BUILD.md` names the key, where to fetch it,
+and the command that checks it) so a diligent user can compare the exact bytes their
+browser received; and,
+later, a browser extension that installs reviewed code rather than re-fetching it per
+load. Real update transparency requires an out-of-band monitor, which a server that
+discriminates per user can still evade.
 
 ## R2 - Host co-location
 
@@ -127,8 +131,10 @@ answers. Two places that reaches, both bounded rather than removed:
 ## R4 - No forward secrecy (v0)
 
 v0 seals with static per-pair keys. A later compromise of an identity/encryption key
-can decrypt past messages. A ratchet is planned for v1. This is why non-extractable
-key storage (R1) matters more, not less, in v0.
+can decrypt past messages. A ratchet is planned for v1. Because there is no ratchet, a
+seed that leaks once decrypts everything that pair ever sent. R20 explains why
+non-extractable key handles do not prevent that leak, which makes the absence of
+forward secrecy sharper in v0 rather than softer.
 
 Said in the product, on the screen that holds the messages, rather than only here.
 
@@ -155,16 +161,39 @@ and a USPTO search are required before any commercial offering.
 A mailbox has two capabilities (write_cap, pull_token). Its per-mailbox walls (blob
 count, byte budget) are properties of the mailbox, so they are shared by everyone who
 holds that write_cap. The client contract is therefore **one mailbox per pairing**: the
-budgets belong to the two paired peers and no third party holds the cap. If a deployment
-instead uses one mailbox per user (many senders to one recipient mailbox), one noisy
-sender can starve the others; that model would need a per-write-cap sub-quota.
+budgets belong to the two paired peers, and no third party holds the cap **unless the
+ceremony was observed** (see below). If a deployment instead uses one mailbox per user
+(many senders to one recipient mailbox), one noisy sender can starve the others; that
+model would need a per-write-cap sub-quota.
+
+**What a filmed ceremony costs, and it is not confidentiality.** The write_cap is handed to
+the peer on the optical channel, in the clear, because nothing may sit between card
+serialization and the optical encoder. A bystander's phone, a shop camera or a housemate
+across the room therefore ends up holding a working write capability for one of the two
+boxes.
+
+That observer cannot read anything. The pull token never leaves the device that reserved the
+box, so a read attempt is refused, and every blob is sealed to a key the observer does not
+have. What the observer can do is write. Measured against the shipped relay on its default
+configuration, a filmed write_cap fills its mailbox to the blob ceiling in under a second,
+after which the real sender's messages are refused with `mailbox full` and the recipient's
+screen reports nothing waiting. Neither person is told that a third party did this, and the
+sender's current copy attributes the refusal to relay capacity.
+
+v0 has no cap rotation (R6), so the pairing cannot be repaired remotely: the two people have
+to meet and pair again. The mitigation this calls for is the per-write-cap sub-quota that the
+paragraph above says is only needed for the many-senders model. That reasoning was wrong,
+because it assumed the capability stays with the two peers. It is scheduled as relay work
+rather than named and left, and the sender-side copy is corrected with it.
+
+Stated plainly, because the short version misleads in both directions: filming the ceremony
+does not let anyone read a message, and it does let anyone stop one.
 
 **As implemented (WP3b): one mailbox per pairing DIRECTION, which is two.** Each device
 reserves the box it will READ, keeps that box's pull_token, and hands the peer the id plus
-the write_cap optically during the ceremony. Every mailbox then has exactly one writer and
-exactly one reader, which is strictly narrower than the property above: no third party
-holds a cap, no other pairing shares the budget, and each side holds exactly one capability
-per box.
+the write_cap optically during the ceremony. Every mailbox then has exactly one *intended*
+writer and exactly one reader, no other pairing shares the budget, and each side holds
+exactly one capability per box.
 
 The reason it is two and not one is delete-on-pull (R9). A single shared box is READ by
 both peers, and a pull deletes; a blob is opaque, so it cannot be told from another blob
@@ -479,9 +508,14 @@ back an answer declaring more than `MAX_RESPONSE_BYTES`:
   destroyed, which is worse than the missing warning above rather than milder than it.
 
 It is named rather than fixed for two reasons, and both are load bearing. It is PRE-EXISTING:
-at the commit that introduced it the identical scenario renders the byte-identical reassurance line, and the
-lone-defect line differs from it only by the terminating stop this round's renderer adds to
-every summary. And it requires a NONCONFORMING relay: the ceiling is 256 KiB
+run against the revision immediately BEFORE this round's messaging work, the identical scenario
+renders the byte-identical reassurance line, and the lone-defect line differs from it only by
+the terminating stop this round's renderer adds to every summary. That revision is not reachable
+from the public history, which begins at the squashed `v0.1.0` commit, so a reader outside this
+repository cannot re-run that comparison and has this record for it and nothing else. What such
+a reader can run is the measurement described above, against the shipped code, which is the half
+that decides whether the line is wrong today rather than who made it wrong. And it requires a
+NONCONFORMING relay: the ceiling is 256 KiB
 (`MAX_RESPONSE_BYTES`) while the relay's own write path caps a blob at 64 KiB
 (`max_blob_bytes`, and the shipped nginx refuses a request body over 128 KiB before it reaches
 the relay at all), so an honest relay has no way to answer a pull with an oversize body. A
@@ -614,3 +648,39 @@ party, and the refusal copy reads as though nothing left the device at all.
 
 **What reopens it:** any claim that a refused pairing is invisible outside the two devices, or
 any change that puts identity material rather than an opaque coordinate into the reservation.
+
+## R20 - Non-extractable key handles do not protect the seed
+
+R1 names non-extractable WebCrypto keys as a mitigation. Until 2026-08-10 its wording credited
+them with denying a later-served bundle the ability to exfiltrate long-term keys. That is true
+of the `CryptoKey` handle and false of the thing that actually matters, which is why R1 now
+points here.
+
+Keyweave generates two 32-byte seeds in JavaScript from the platform CSPRNG, stores them in the
+passphrase-sealed vault, and imports them into non-extractable `CryptoKey`s on every unlock.
+The entropy is fine; the reachability is the problem. `generateKey` is never called, so the key
+material exists in JavaScript memory before the import, during it, and for as long as the vault
+stays unlocked. A malicious bundle that can run in the page can read a seed and rebuild the
+identity offline, at leisure, forever. Sixty-four bytes are enough.
+
+The fact was half-recorded in the source: `client/src/keys.ts:11-12` says the seeds are the
+only serialized secret and that they live encrypted in the vault. But the same comment block,
+five lines above, still states the payoff this residual refutes, that a later-served bundle
+"cannot exfiltrate raw key bytes and decrypt forever offline". So the code was not honest
+either; it carried the same overclaim as the documents, and correcting that comment is filed
+with the next release that touches `client/src`.
+
+This is a deliberate tradeoff and not an oversight, but it was never written down. Keys that are
+generated inside WebCrypto and never leave it would close this branch, and browsers can persist
+such a key by structured-cloning it into IndexedDB. The cost is that the vault stops being
+portable: it becomes bound to one browser profile on one device, and a lost device is a lost
+identity with no passphrase recovery. v0 chose a portable, passphrase-recoverable vault. A
+device-bound key option is v1 work and is the right way to close this.
+
+What the non-extractable handles still buy is narrow and real: a bundle that gets only the handle
+can sign and decrypt while it is resident, and cannot walk away with the key. That is the
+difference between an online oracle and an offline archive, and it is worth having. It is not
+what R1 claimed.
+
+**What reopens it:** any claim, in the documents or in the product, that a compromised bundle
+cannot obtain long-term key material.
