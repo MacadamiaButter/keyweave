@@ -192,6 +192,17 @@ fi
 echo
 echo "artifact hashes (sha256):"
 cd dist
+# Refuse, never widen: hashing through a link would attest bytes from outside the
+# tree under an in-tree name, which is a false attestation in the exact block
+# people are told to quote.
+odd="$(find . ! -type d ! -type f -print)"
+if [ -n "$odd" ]; then
+  echo "STOP: dist holds entries that are not regular files. The hash block below" >&2
+  echo "      lists regular files only, so it would not describe what a deploy" >&2
+  echo "      actually serves:" >&2
+  printf '%s\n' "$odd" >&2
+  exit 1
+fi
 find . -type f | sort | while read -r f; do
   printf '  %s  %s\n' "$(hash256 "$f")" "${f#./}"
 done

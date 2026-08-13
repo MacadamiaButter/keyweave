@@ -40,12 +40,13 @@ is not a gate but a build, named at the bottom of this section.
    RELEASE the camera at five minutes. Beforehand, headlessly, the optical hop was completed
    browser to browser with no human at all.
 
-So no gate remains. What remains is building the release at the ACTUAL tag rather than at
-whatever was current when this paragraph was written, and re-running WP8's cross-machine hash
-comparison at that tag. WP8 has changed character: while the build-host condition was open it
-was the only defensible answer to "can you trust this build host", and now it is corroboration
-on top of a host with no unattended root path. Everything below was staged ahead of this moment
-so the work is reading and pasting rather than designing under pressure.
+So no gate remains. Since this paragraph was written the release has been built and signed at real
+tags, v0.1.1 and then v0.1.2, with the artifact hashes inside the signed tag messages; what remains
+is re-running WP8's cross-machine hash comparison at a release tag. WP8 has changed character:
+while the build-host condition was open it was the only defensible answer to "can you trust this
+build host", and now it is corroboration on top of a host with no unattended root path. Everything
+below was staged ahead of this moment so the work is reading and pasting rather than designing
+under pressure.
 
 **Why every paste block asserts before it acts.** On 2026-08-05 a long nginx header line
 wrapped when pasted into a terminal, `nginx -t` accepted the multi-line quoted string, and
@@ -343,19 +344,12 @@ text is NOT inside `client/dist` and that is on purpose:
 `client/test/build-no-external-origin.test.ts` permits no http(s) origin in a default build
 (residual R13) and license texts contain URLs, so emitting them into `dist/` fails that gate
 with thirteen origins. Serving them beside the bundle satisfies the licenses without putting
-an exemption into the origin wall. From the repository root, with `$APPROOT` the directory
-the app is served from:
-
-```bash
-install -m 0644 NOTICE "$APPROOT/NOTICE"
-install -d -m 0755 "$APPROOT/LICENSES"
-install -m 0644 LICENSES/*.txt "$APPROOT/LICENSES/"
-# Assert, because a silently missing legal file looks exactly like a working deployment:
-test -s "$APPROOT/NOTICE" && ls -1 "$APPROOT/LICENSES" | wc -l
-```
-
-That count must equal the number of files in `LICENSES/` in the tree you built from. These
-two paths are NOT covered by the artifact hashes, which cover `client/dist` only.
+an exemption into the origin wall. The upload itself lives in `DEPLOY-APP.md` step 7b,
+which owns exactly that subtree with the same dry-run discipline as the main upload. An
+earlier revision of this step showed `install` commands against an `$APPROOT` that nothing
+defined, on a host that has no clone of the repository: an upload that could not happen,
+asserted as done. These two paths are NOT covered by the artifact hashes, which cover
+`client/dist` only.
 
 Publish the hashes FIRST, and only then upload. Publishing the hash after the bytes are live
 inverts the point of it. From `v0.1.1` the hashes go in the ANNOTATED TAG MESSAGE, because that

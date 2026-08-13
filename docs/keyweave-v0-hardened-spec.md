@@ -257,7 +257,10 @@ bounded acceptance window + a per-sender seen-set persisted in the vault**. Its 
 (seen-set cap eviction; empty seen-set on vault upgrade; a >24h clock-behind self-outage) are in
 `NAMED-RESIDUALS.md` R11–R12.
 
-**Not yet built (later work packages):** the optical layer (vendoring decimen after a full-history
-review + the never-encrypt-the-optical-payload invariant), the browser UI, and the deploy
-(owner-run, gated on the build-host condition). The durable-state wiring that connects the client
-`Vault` to the `ReplayGuard` on unlock/save is future integration work; the API for it exists.
+**Not yet built when this section was written on 2026-08-08, and all built since:** the optical
+layer (decimen was vendored on 2026-08-08 under `client/vendor/decimen/`, with its provenance in
+`client/vendor/decimen/PROVENANCE.md` and the never-encrypt-the-optical-payload invariant enforced
+in tests), the browser UI, and the deploy (owner-run; the build-host condition closed 2026-08-09
+and both origins are live, see `DEPLOY.md` and `DEPLOY-APP.md`). The durable-state wiring that
+connects the client `Vault` to the `ReplayGuard` on unlock/save has landed as well: the guard is
+restored from the sealed state on unlock, in `client/src/vault.ts`.

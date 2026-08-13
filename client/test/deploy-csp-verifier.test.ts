@@ -352,3 +352,66 @@ describe('no line an operator pastes is long enough to wrap', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// THIRD JOB, added after review round 6 (2026-08-13). DEPLOY-APP.md is the runbook an
+// operator pastes the stage-B vhost from, and until this round its copy of the generated
+// header block was the one no test read: a weakened set $csp_c in that file left the whole
+// suite green while the twin block in DEPLOY-CSP.md was pinned byte-for-byte. The stage-B
+// heredoc is anchored by its own first comment line; stage A also terminates in VHOST, so
+// an unanchored scan would read the wrong block.
+
+const APP_DOC = readFileSync(fileURLToPath(new URL('../../docs/DEPLOY-APP.md', import.meta.url)), 'utf8');
+const APP_HSTS = 'add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;';
+
+/** The stage B heredoc. Stage A (the ACME bootstrap vhost) also ends in VHOST, so anchor. */
+function stageBVhost(): string {
+  const m = /^# Keyweave app host, stage B\b[\s\S]*?^VHOST$/m.exec(APP_DOC);
+  if (!m) throw new Error('no stage B heredoc in DEPLOY-APP.md');
+  return m[0];
+}
+
+/** Directives of one kind, trimmed, at ANY indent: a header hidden in a location block counts. */
+function directives(text: string, kind: 'set $csp_' | 'add_header '): string[] {
+  return text.split('\n').map((l) => l.trim()).filter((l) => l.startsWith(kind));
+}
+
+describe('DEPLOY-APP.md stage B embeds the generated block, not a retyped one', () => {
+  const vhost = stageBVhost();
+  const generated = nginxCspBlock(DOC_ORIGIN);
+
+  it('the set $csp_ lines are the generated ones, in order, with no extras', () => {
+    // Equality, not containment: a SECOND set $csp_c appended below the right one wins in
+    // the rewrite phase, and `toContain` would still be satisfied by the first.
+    expect(directives(vhost, 'set $csp_')).toEqual(directives(generated, 'set $csp_'));
+  });
+
+  it('every add_header anywhere in the block is generator output, plus the deliberate HSTS line', () => {
+    // ANY indent on purpose. An add_header inside `location = /index.html` replaces the
+    // whole inherited set for the one response carrying the CSP, which is the hazard the
+    // document spends a paragraph on, and neither the step-5 markers nor step 6b see it.
+    expect(directives(vhost, 'add_header ')).toEqual([APP_HSTS, ...directives(generated, 'add_header ')]);
+  });
+
+  it('the generated lines are pasted as whole single lines', () => {
+    for (const line of [...directives(generated, 'set $csp_'), ...directives(generated, 'add_header ')]) {
+      expect(vhost, `not present as a whole line: ${line}`).toContain(`\n    ${line}\n`);
+    }
+  });
+});
+
+describe('every sudo block in the app-host runbook gates on the box identity', () => {
+  // The relay sitting proved OS-level gates pass on the wrong box (two estate boxes agree
+  // on OS and Python); the hostname gate is the wall, and a wall with a hole is only
+  // eyeballable if it is uniform. DEPLOY.md is excluded: its blocks target the relay box.
+  it('DEPLOY-APP.md', () => {
+    const fence = /^[ \t]*```(?:bash|sh)\n([\s\S]*?)\n[ \t]*```/gm;
+    const offenders: string[] = [];
+    for (const block of [...APP_DOC.matchAll(fence)]) {
+      const body = block[1]!;
+      if (body.includes('sudo ') && !body.includes('ubuntu-main-relay')) {
+        offenders.push(body.split('\n')[0]!);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

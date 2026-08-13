@@ -27,6 +27,11 @@ later, a browser extension that installs reviewed code rather than re-fetching i
 load. Real update transparency requires an out-of-band monitor, which a server that
 discriminates per user can still evade.
 
+The chosen app host also carries the `localfirstlab.org` static site and a second web
+application behind a reverse-proxy vhost on the same machine. R1's trust base is therefore
+that machine as a whole rather than the app's own vhost; `docs/DEPLOY-APP.md` records this
+as an accepted decision in the section listing what it was built on.
+
 ## R2 - Host co-location
 
 The app bundle and the relay must not share a single host/root, or one compromise is
@@ -76,7 +81,7 @@ Four things remain open, and none of them is a code change:
   accept this residual by name. **The owner picked the first on 2026-08-09**, which `DEPLOY.md`
   records above its own steps: step 5b is REQUIRED for that deployment rather than optional,
   and this paragraph does not describe it. It stays because it is what any other host still
-  costs, and because nothing is deployed yet.
+  costs.
 
 ## R3 - Traffic metadata
 

@@ -44,6 +44,7 @@ sign-then-encrypt seal, replay defense, at-rest vault, relay hardening) are in
 - `relay/` - Python standard-library mailbox relay. Opaque-blob store, split
   write/pull tokens, per-mailbox locking with bounded purge, GC'd rate/failure
   limiters, forked from the adversarially-hardened EdgeDancer ingest relay.
-- `vendor/decimen/` - (later) the pinned optical transport, wrapped: our signed CBOR
-  card is encoded to fountain frames; the payload is never encrypted (a patent-posture
-  invariant).
+- `client/vendor/decimen/` - the pinned optical transport, vendored 2026-08-08 with its
+  provenance in `client/vendor/decimen/PROVENANCE.md` and wrapped by `client/src/optical.ts`:
+  our signed CBOR card is encoded to fountain frames; the payload is never encrypted (a
+  patent-posture invariant).

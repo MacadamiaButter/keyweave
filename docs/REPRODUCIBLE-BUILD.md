@@ -48,7 +48,7 @@ history, with node v22.22.1 and npm 9.2.0: two consecutive
 working-tree builds agreed, and a fresh `git clone` plus `npm ci` plus `npm run build` agreed
 with both, across all six emitted files including the wasm. So the build does not depend on
 uncommitted edits, stray files, or a warm `node_modules`. Nobody has to take that on trust:
-the same measurement at a tag you can check out is two runs of `scripts/reproduce.sh v0.1.1`
+the same measurement at a tag you can check out is two runs of `scripts/reproduce.sh v0.1.2`
 with the same `KEYWEAVE_RELAY_ORIGIN`, compared.
 
 Re-measured 2026-08-09 for the split configuration: two consecutive working-tree builds with
@@ -228,7 +228,11 @@ the problem.
    The page does not tell you which version it is, and is not asked to: a bundle reporting
    its own version is the self-attestation refused above, so the verifier names the tag and
    the bytes either match it or they do not. An unverified release body is a web page like
-   any other.
+   any other. A tag message can carry more than one labelled hash block, one per build
+   configuration: `v0.1.2` carries the deployed-origin block first and the same-origin block
+   second. Compare against the block whose stated build inputs match the configuration you are
+   checking, because a disagreement with the OTHER block is a different build input and not
+   tampering.
 
 A mismatch means the served bytes are not the released bytes. A match means they were, for
 that visit, on that machine. It says nothing about the next visit, which is why this is a
@@ -269,6 +273,7 @@ Owner-run, always. The agent lane stages; a person publishes.
    SAME origin (`node client/scripts/print-csp.mjs <origin>`, and `docs/DEPLOY.md` step 5b).
 5. Verify from outside: fetch the deployed files over the public URL, hash them, and compare
    with the release. Do this from a machine that is not the build host.
+   `docs/DEPLOY-APP.md` step 8 carries this as a runnable block.
 
 Step 5 is the one that is easy to skip and is the only step that checks the deploy rather
 than the build.

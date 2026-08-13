@@ -1,67 +1,119 @@
 # Keyweave
 
-Meet once with light, then talk over the open internet with certainty about who
-you are talking to.
+Meet once with light, then talk over the open internet with confidence about who you are
+talking to.
 
-Keyweave is a secure messenger with an unusual trust model. Two people pair **in
-person** by pointing one phone's camera at another phone's screen, which streams a
-signed contact card as an animated QR code (embedding the fountain-coded optical
-transport from [decimen-optical-transfer](https://github.com/bashalarmistalt/decimen-optical-transfer)).
-Because a camera pointed at a screen cannot be intercepted from the network,
-**physical presence is the authentication** - this is the part every other
-end-to-end-encrypted system struggles with (Signal's safety numbers, PGP's web of
-trust). After pairing, messages travel over ordinary clearnet as sealed ciphertext
-through a dumb mailbox relay that only ever sees ciphertext and an opaque routing
-tag. Sending is not instant: the local vault is re-sealed before and after the relay
-call and each seal re-runs the passphrase key derivation, so a send costs a few seconds
-of computation on ordinary hardware, by design (residual R22 has the measurements).
+Keyweave is a secure messenger with an unusual trust model. Two people pair **in person** by
+pointing one phone's camera at another phone's screen, which streams a signed contact card as an
+animated QR code (embedding the fountain-coded optical transport from
+[decimen-optical-transfer](https://github.com/bashalarmistalt/decimen-optical-transfer)). Because a
+camera pointed at a screen cannot be intercepted from the network, **physical presence is the
+authentication**, which is the part end-to-end-encrypted systems usually leave to the user
+(Signal's safety numbers, PGP's web of trust). After pairing, messages travel over ordinary
+clearnet as sealed ciphertext through a dumb mailbox relay. The relay never sees plaintext or
+identity keys; like any server it does see timing, sizes and network addresses (R3 below).
+
+## Try it
+
+The app is live at **https://keyweave.localfirstlab.org**. That URL is the application itself and
+not a page about it: it serves the v0.1.2 bundle, and on 2026-08-13 the bytes it served were
+checked file by file against the hashes in the signed `v0.1.2` tag. Its relay runs on a separate
+host at `https://relay.keyweave.localfirstlab.org` and answers only under `/v1/`, so a plain
+`GET /` there returns 404 by design and is not an outage.
+
+Pairing needs two devices in the same room, each with a camera and a screen, both with the app
+open: one shows the animated symbol while the other scans it, then the two swap roles, and both
+people compare six words aloud before either presses "The words match". A single device can
+create an identity and look around, but it cannot finish a ceremony alone. The vault is sealed
+with a passphrase that is escrowed nowhere, so forgetting it loses that identity. Three more
+things are worth knowing before you start.
+
+- **Using the hosted app means trusting the code that origin serves you.** A browser re-fetches its
+  JavaScript on every load, and optical pairing does nothing about a malicious bundle: that is the
+  top residual, R1 in [docs/NAMED-RESIDUALS.md](docs/NAMED-RESIDUALS.md). To check rather than
+  trust, compare the bytes your browser received against the signed tag: reasoning in
+  [docs/REPRODUCIBLE-BUILD.md](docs/REPRODUCIBLE-BUILD.md), runnable block in step 8 of
+  [docs/DEPLOY-APP.md](docs/DEPLOY-APP.md).
+- **Sending is not instant.** The local vault is re-sealed before and after the relay call and each
+  seal re-runs the passphrase key derivation, so one successful send costs about 6.3 seconds of
+  computation on the desktop it was measured on, by design (R22 records the measurement).
+- **Pressing Show or Scan reserves a drop box at the relay** before anyone has decided anything, so
+  the relay learns that a network address began a pairing at that moment, even for ceremonies the
+  two people then refuse. It learns no identity and reads no plaintext. That is R19.
 
 ## What Keyweave protects, and what it does not
 
 Keyweave aims to be honest about its limits. In plain terms:
 
-- **Protects:** an in-person-authenticated identity (the relay never learns your
-  identity keys), message confidentiality and integrity against the relay and the
-  network.
-- **Does not protect (v0):** the integrity of the code your browser is served (this
-  is web software; see the delivery/trust notes), traffic metadata (an observer of
-  the relay can see which mailboxes talk to each other by timing and network
-  address), forward secrecy (a later key compromise can decrypt past messages), or a
-  compromised/stolen unlocked device.
+- **Protects:** an in-person-authenticated identity (the relay never learns your identity keys),
+  message confidentiality and integrity against the relay and the network.
+- **Does not protect (v0):** the integrity of the code your browser is served (R1 above), traffic
+  metadata (an observer of the relay can see which mailboxes talk to each other by timing and
+  network address, R3), forward secrecy (a later key compromise can decrypt past messages, R4), or
+  a compromised or stolen unlocked device (R5).
 
-The threat model, the named residuals, and the design spec that fixes the wire format
-are in `docs/`.
+Those R-numbers are entries in [docs/NAMED-RESIDUALS.md](docs/NAMED-RESIDUALS.md), which states
+each limit, what it costs, and what would close it.
 
 ## Status
 
-Early development. v0 is deliberately small: optical pairing (SAS-with-DH
-verification) + static-key sealed-box messaging + a pull-model mailbox relay, text
-only. No forward secrecy, groups, or multi-device yet.
+Early development, and deployed. v0 is deliberately small: optical pairing (SAS-with-DH
+verification) plus static-key sealed-box messaging plus a pull-model mailbox relay, text only. No
+forward secrecy, groups, or multi-device yet.
 
-Built so far: the crypto core, the mailbox relay, the optical transport, and the
-browser app, including the pairing ceremony and one-to-one text messaging over the
-relay. Nothing is deployed.
+**v0.1.2 is the current release and its tag is signed.** It supersedes v0.1.1, a signed prerelease
+carrying two claims since withdrawn; v0.1.0 is unsigned and stays unsigned, because signing it now
+would mean moving a published tag. Both halves run: the app origin above serves the attested v0.1.2
+bundle, and the relay is on a host of its own, which is what R2 asks for, since one host serving
+both would make a single compromise a total break.
 
-The browser UI HAS been run in a browser, which this file previously denied. A full
-three-turn ceremony ran on two physical devices on 2026-08-09, and the three arms that
-remained after it, the mismatch refusal, camera denial and the insecure-context control,
-ran headlessly against a real virtual camera on 2026-08-10. What no test here has done is
-light two screens at the same time in front of two people; that is what R15 still names.
+What has been run in a browser rather than inferred: a full three-turn ceremony on two physical
+devices on 2026-08-09, and the three arms that remained after it, the mismatch refusal, camera
+denial and the insecure-context control, headlessly against a real virtual camera on 2026-08-10. No
+test here has lit two screens at once in front of two people comparing words to each other, which
+is what R15 still names.
 
-## Layout
+## Verifying a release
 
-- `client/` - the browser client (TypeScript): key management, contact cards,
-  pairing crypto, message sealing, the encrypted local vault, and the pairing app in
-  `client/src/ui/`.
-- `relay/` - the store-and-forward mailbox relay (Python, standard library).
-- `scripts/` - `reproduce.sh`, which rebuilds the client from a git ref and prints
-  the artifact hashes. See "Verifying a release" below.
-- `docs/` - `ARCHITECTURE.md` (the map), `keyweave-v0-hardened-spec.md` (the design
-  review this version was built against, and the build contract), `THREAT-MODEL.md`,
-  `NAMED-RESIDUALS.md` (the limits, numbered, with what would close each one),
-  `REPRODUCIBLE-BUILD.md`, `DEPLOY.md` and `DEPLOY-CSP.md`.
+A release publishes the sha256 of every file in the built bundle so that the bundle can be checked
+rather than taken on trust. **The signed tag message is the authoritative record of those hashes.**
+The GitHub release body repeats them, but it is editable by whoever holds the account and carries
+no signature, so it is a readable copy, never the record. In a clone of this repository:
 
-## Running the client
+```sh
+curl -fsSL https://localfirstlab.org/keyweave-release-key.asc | gpg --import
+git verify-tag v0.1.2   # good signature, fingerprint D78D89413752779209479B9ACF5C8AB3DB4A56EB
+git cat-file -p v0.1.2  # the signed message: build inputs and artifact hashes
+```
+
+Compare the whole fingerprint, never a suffix; [docs/REPRODUCIBLE-BUILD.md](docs/REPRODUCIBLE-BUILD.md)
+prints the same one and explains what the signature does and does not prove. The key comes from
+`localfirstlab.org` and not from GitHub on purpose: a key served by the same host that serves the
+tag proves nothing. **GitHub shows these tags as "Unverified", which is expected**, because the
+signing key is deliberately not registered with the GitHub account, so GitHub genuinely cannot
+check it and says so.
+
+Then rebuild and compare. `scripts/reproduce.sh` clones this repository at a git ref, installs the
+committed lockfile with `npm ci` into a fresh directory, builds, and prints every file's hash:
+
+```sh
+KEYWEAVE_RELAY_ORIGIN=https://relay.keyweave.localfirstlab.org scripts/reproduce.sh v0.1.2
+```
+
+The hashes are a function of the commit AND of that variable, which is baked into the bundle, so
+the script refuses to guess one: either pass the origin the tag message names, or pass
+`KEYWEAVE_SAME_ORIGIN=1` to build a same-origin bundle on purpose. The v0.1.2 tag message publishes
+a labelled block per configuration, deployed-origin first and same-origin second. Compare against
+the block whose build inputs match yours, and there every file must match: one differing file is a
+failed verification, not a curiosity. Most files agree across the two blocks anyway, because only
+some files embed the relay location, so agreement with the other block's build proves nothing
+about yours.
+
+[docs/REPRODUCIBLE-BUILD.md](docs/REPRODUCIBLE-BUILD.md) is the longer version: what a matching
+hash does and does not prove, how to compare the bytes your own browser received, and which
+corroborations have been run rather than planned.
+
+## Running it locally
 
 ```sh
 cd client
@@ -71,34 +123,59 @@ npm run build      # emits dist/
 npm run gate       # typecheck plus the whole suite
 ```
 
-The camera needs a secure context, so pairing works on `localhost` or over HTTPS and
-nowhere else. There is no CI runner in this repository: `npm test` run by whoever
-touches the code is what "enforced" means, and it includes the build-time assertion
-that no external origin survives in `dist/`.
+The camera needs a secure context, so pairing works on `localhost` or over HTTPS and nowhere else.
+There is no CI runner in this repository: `npm test` run by whoever touches the code is what
+"enforced" means, and it includes the build-time assertion that no external origin survives in
+`dist/`.
 
-## Verifying a release
-
-A release publishes the sha256 of every file in the built bundle so that they can be
-checked rather than taken on trust. `scripts/reproduce.sh` clones this repository at a
-git ref, installs the committed lockfile with `npm ci` into a fresh directory, builds,
-and prints the hash of every file it produced:
+The relay is Python with nothing outside the standard library, and so is its suite:
 
 ```sh
-# the release body names the value KEYWEAVE_RELAY_ORIGIN was built with
-KEYWEAVE_RELAY_ORIGIN=<value from the release body> scripts/reproduce.sh v0.1.0
+python3 -m unittest discover -s relay/tests -t .
 ```
 
-The hashes are a function of the commit AND of that variable, which is baked into the
-bundle, so the script refuses to guess one: either pass the origin the release names, or
-pass `KEYWEAVE_SAME_ORIGIN=1` to build a same-origin bundle on purpose. Expect that one to
-disagree with the release, and expect several files to match anyway, because not every file
-carries the relay location: a partial match means a different build input, not a modified
-source. Compare the whole printed block against the release body, and verify the tag
-signature on refs that carry one.
+Running a relay for real means a config file, nginx in front and a systemd unit, which is what
+[docs/DEPLOY.md](docs/DEPLOY.md) walks through. Its step 1 config example is written for that
+setup, not for standalone use: it sets header-trust flags that are only correct behind the
+runbook's nginx.
 
-`docs/REPRODUCIBLE-BUILD.md` is the longer version: what a matching hash does and does
-not prove, how to check the signature and against which key, and which corroborations
-have actually been run rather than planned.
+## Running your own
+
+Nothing in the design requires our hosts. Two runbooks, each written to be pasted a block at a
+time and asserting before it acts, plus one explainer:
+
+- **The relay host:** [docs/DEPLOY.md](docs/DEPLOY.md), through config, nginx, systemd and fail2ban.
+- **The app host:** [docs/DEPLOY-APP.md](docs/DEPLOY-APP.md), through DNS, certificate, vhost and
+  response headers, the build at a tag, the upload, and verification from outside, including the
+  served-bytes check against the signed tag.
+- **Why one variable does so much:** [docs/DEPLOY-CSP.md](docs/DEPLOY-CSP.md).
+  `KEYWEAVE_RELAY_ORIGIN` sets the compiled relay URL, the policy in the page and the policy header,
+  and the three have to agree.
+
+Keep the app and the relay on separate hosts if you can (R2), and read the residuals before telling
+anyone else to use what you deployed.
+
+## Layout
+
+- `client/` - the browser client (TypeScript): key management, contact cards, pairing crypto,
+  message sealing, the encrypted local vault, and the pairing app in `client/src/ui/`. The pinned
+  optical transport is vendored under `client/vendor/decimen/`, with its provenance beside it.
+- `relay/` - the mailbox relay (Python, standard library), its systemd unit, its nginx location
+  block, and `RELAY-RESIDUALS.md` for the relay's own limits.
+- `scripts/` - `reproduce.sh`, which rebuilds the client from a git ref and prints the artifact
+  hashes. See "Verifying a release" above.
+
+The documents in `docs/`, by what you came to find out: how the halves fit together,
+`ARCHITECTURE.md`; who can do what to you, `THREAT-MODEL.md`; the limits, numbered, each with what
+would close it, `NAMED-RESIDUALS.md`; how to check the bytes, `REPRODUCIBLE-BUILD.md`; the design
+review this version was built against, which is also the build contract,
+`keyweave-v0-hardened-spec.md`; and how to host it, `DEPLOY.md` for the relay, `DEPLOY-APP.md` for
+the app, `DEPLOY-CSP.md` for the policy.
+
+## Reporting a vulnerability
+
+Privately, please: **hello@localfirstlab.org**, optionally encrypted to the release signing key
+above. [SECURITY.md](SECURITY.md) has the details and what to expect in response.
 
 ## License
 
