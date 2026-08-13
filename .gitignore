@@ -30,3 +30,6 @@ relay/data/
 # OS / editor
 .DS_Store
 *.swp
+
+# Claude Code worktrees (parallel-builder isolation)
+.claude/

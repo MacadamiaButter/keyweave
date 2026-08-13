@@ -12,7 +12,9 @@ Because a camera pointed at a screen cannot be intercepted from the network,
 end-to-end-encrypted system struggles with (Signal's safety numbers, PGP's web of
 trust). After pairing, messages travel over ordinary clearnet as sealed ciphertext
 through a dumb mailbox relay that only ever sees ciphertext and an opaque routing
-tag.
+tag. Sending is not instant: the local vault is re-sealed before and after the relay
+call and each seal re-runs the passphrase key derivation, so a send costs a few seconds
+of computation on ordinary hardware, by design (residual R22 has the measurements).
 
 ## What Keyweave protects, and what it does not
 

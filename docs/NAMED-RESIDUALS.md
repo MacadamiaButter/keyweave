@@ -73,7 +73,10 @@ Four things remain open, and none of them is a code change:
   `docs/DEPLOY.md` recommended it while also handing the operator an nginx block and a
   `curl -sI` assertion, which is not a runbook anybody can follow. That contradiction is now
   an explicit OWNER DECISION in `DEPLOY.md`: move the app to a host that can send headers, or
-  accept this residual by name. It is open until the owner picks one.
+  accept this residual by name. **The owner picked the first on 2026-08-09**, which `DEPLOY.md`
+  records above its own steps: step 5b is REQUIRED for that deployment rather than optional,
+  and this paragraph does not describe it. It stays because it is what any other host still
+  costs, and because nothing is deployed yet.
 
 ## R3 - Traffic metadata
 
@@ -86,8 +89,18 @@ Two consequences carried into the client rather than left in this file. The sent
 naming this is on the paired screen and on the conversation screen, in the product, and
 `client/test/ui-shell.test.ts` refuses the phrasings that would contradict it. And there
 is no background sync, no service worker and no push subscription: a conversation polls
-only while its screen is open, because a background fetch of a mailbox is traffic the
-relay sees and the person does not.
+only while its screen is open, including open in a background tab, because a background
+fetch of a mailbox is traffic the relay sees and the person does not.
+
+Open means open and not visible, which is worth saying because the short version invites the
+other reading: nothing in `client/src` reads `document.hidden` or listens for
+`visibilitychange`, and the poll loop in `src/ui/app.ts` asks only whether the vault is
+locked, so a tab left behind another window goes on talking to the relay. A browser that
+throttles background timers stretches the interval to about a minute, which is still well
+inside the five minute idle window, so by R17's mechanism the vault in that tab does not lock
+either; a tab frozen outright stops polling and freezes the lock timer with it, which arrives
+at the same place by the other road. R17, R18 and this are one arrangement rather than three,
+so anyone who changes the poll or the idle lock has to read all three before deciding.
 
 **The relay also controls TIMING, which is a residual of its own.** It can hold a blob for
 as long as the acceptance window and hand it over whenever it likes, and it can pace its
@@ -183,8 +196,10 @@ sender's current copy attributes the refusal to relay capacity.
 v0 has no cap rotation (R6), so the pairing cannot be repaired remotely: the two people have
 to meet and pair again. The mitigation this calls for is the per-write-cap sub-quota that the
 paragraph above says is only needed for the many-senders model. That reasoning was wrong,
-because it assumed the capability stays with the two peers. It is scheduled as relay work
-rather than named and left, and the sender-side copy is corrected with it.
+because it assumed the capability stays with the two peers. It is planned relay work that has
+not shipped in any release: no published `relay/keyweave_relay.py` carries a per-write-cap
+sub-quota, which is a `grep` a stranger can run, and the sender-side copy is corrected in the
+same change that adds one.
 
 Stated plainly, because the short version misleads in both directions: filming the ceremony
 does not let anyone read a message, and it does let anyone stop one.
@@ -201,9 +216,15 @@ without pulling it. A device polling a shared box would therefore pull and destr
 outbound message before the peer ever saw it, silently. Splitting by direction removes the
 case rather than working around it.
 
-A fresh pair of boxes per pairing is what stops one peer spending another's budget. A
-ceremony that is abandoned leaves an empty box behind; the relay reclaims an empty, idle
-mailbox after `mailbox_idle_days`.
+A fresh pair of boxes per pairing is what stops one peer spending another's budget. The relay
+reclaims an empty mailbox that has been idle past `mailbox_idle_days`, thirty days by
+default, and that is not only about abandoned ceremonies: delete-on-pull leaves a HEALTHY
+inbox empty in steady state, so what keeps a box alive is activity and not contents. `add`,
+`list` and `pull` each touch the mailbox and a conversation nobody opens does none of them,
+so a quiet but perfectly healthy pairing loses both of its boxes after thirty days in which
+neither side opened it. The product already says this rather than leaving it to this file:
+the relay-refusal copy tells the person the box may have been reclaimed after a long silence
+and that it needs a fresh pairing in person.
 
 Reserving a box needs the relay, and pairing does not: a device that cannot reach the relay
 pairs anyway, with no coordinate in its optical payload, and that pairing gets NO messaging
@@ -240,6 +261,15 @@ sized so one source cannot fill the global cap over a full TTL, and it does not 
 full TTL, can fill the cap and 507 every tenant. Mitigations shipped: the 14-day TTL +
 delete-on-pull continuously reclaim space. Full oldest-first eviction is deferred past v0.
 Treat "the relay is full" as an availability event, never a confidentiality/integrity one.
+
+**There is a second ceiling of the same class and it lands on different people.**
+`max_mailboxes`, 10000 by default, is enforced inside `create_mailbox` under the index lock,
+so a relay full of mailboxes rather than of bytes refuses every NEW pairing with a 507 while
+every conversation that already holds its boxes keeps sending and pulling normally. The two
+people it stops are the ones standing in front of each other trying to reserve a box, and
+nothing on their screen distinguishes a full relay from a broken one. Reclamation is the same
+shape as it is for the bytes and is bounded the same way: an empty mailbox idle past
+`mailbox_idle_days` is collected (R8), and a mailbox in use is never evicted to make room.
 
 ## R11 - Replay defense is a bounded window + seen-set, with two documented edges
 
@@ -389,12 +419,16 @@ rebuilt from source on its own ports and reproduced all of it with new identitie
   `navigator.mediaDevices` undefined, the error text equal to `CAMERA_COPY.insecureContext`, and
   the retry button correctly HIDDEN because only a denial earns one. It also produced the first
   browser execution of the DEGRADED KEY BACKEND in this project's history, since `crypto.subtle`
-  is undefined on such an origin: see the F2 note, the product says nothing about running the
-  weaker path.
+  is undefined on such an origin: with no WebCrypto the key layer falls back to @noble keys that
+  stay extractable in JavaScript memory, which `client/src/keys.ts` labels a degraded fallback in
+  its own comments and which nothing on screen mentions, so a person on an insecure origin runs
+  the weaker path without being told.
 
-**What is still unrun, and it is the part only people can close:** the two screens are never lit
-at the same time in front of two humans. The divergence above is proven across two sequential
-ceremonies and two screenshots, not across a table. Also untouched by any of this: focus, glare,
+**What is still unrun, and it is the part only people can close: TWO HUMANS.** The 2026-08-09
+run was across a table, and the symbol did decode across it, but it was one person holding both
+devices; the divergence arm above is proven across two sequential ceremonies and two
+screenshots, not across two people comparing six words to each other in one sitting. What is
+missing is the second human, not the table. Also untouched by any of this: focus, glare,
 motion blur, panel tearing, and any camera that is not a synthetic 640x480 30 fps one.
 
 **The structural gap that no device test closes is now itself closed:** `src/ui/app.ts` had no
@@ -642,8 +676,9 @@ The blobs stay opaque and no identity is disclosed; what leaks is the fact and t
 attempt.
 
 **Why it is not R3 or R8.** R3 covers metadata the relay observes about MESSAGING between paired
-devices. R8 covers the STORAGE consequence of an abandoned ceremony, an empty box reclaimed after
-`mailbox_idle_days`. Neither says that a REFUSED pairing has already been announced to a third
+devices. R8 covers the STORAGE consequence of an empty box left idle past `mailbox_idle_days`,
+whether it was abandoned at a ceremony or simply never opened again. Neither says that a
+REFUSED pairing has already been announced to a third
 party, and the refusal copy reads as though nothing left the device at all.
 
 **What reopens it:** any claim that a refused pairing is invisible outside the two devices, or
@@ -663,12 +698,12 @@ material exists in JavaScript memory before the import, during it, and for as lo
 stays unlocked. A malicious bundle that can run in the page can read a seed and rebuild the
 identity offline, at leisure, forever. Sixty-four bytes are enough.
 
-The fact was half-recorded in the source: `client/src/keys.ts:11-12` says the seeds are the
-only serialized secret and that they live encrypted in the vault. But the same comment block,
-five lines above, still states the payoff this residual refutes, that a later-served bundle
-"cannot exfiltrate raw key bytes and decrypt forever offline". So the code was not honest
-either; it carried the same overclaim as the documents, and correcting that comment is filed
-with the next release that touches `client/src`.
+The fact was half-recorded in the source: `client/src/keys.ts` says the seeds are the only
+serialized secret and that they live encrypted in the vault. The same comment block used to
+state the payoff this residual refutes, that a later-served bundle "cannot exfiltrate raw key
+bytes and decrypt forever offline" - the code carried the same overclaim as the documents.
+That comment was corrected in the first release after v0.1.1, and it now names this residual
+instead of contradicting it.
 
 This is a deliberate tradeoff and not an oversight, but it was never written down. Keys that are
 generated inside WebCrypto and never leave it would close this branch, and browsers can persist
@@ -677,6 +712,12 @@ portable: it becomes bound to one browser profile on one device, and a lost devi
 identity with no passphrase recovery. v0 chose a portable, passphrase-recoverable vault. A
 device-bound key option is v1 work and is the right way to close this.
 
+**Portable describes the FORMAT and not anything that ships**, so the tradeoff above is
+narrower than it sounds: v0 has no export, no backup and no second device, the vault lives in
+one browser profile and nothing in the code moves it to another, and clearing site data
+destroys the identity with it - which the product does say, and the only remedy it offers is
+a new identity and a fresh pairing in person.
+
 What the non-extractable handles still buy is narrow and real: a bundle that gets only the handle
 can sign and decrypt while it is resident, and cannot walk away with the key. That is the
 difference between an online oracle and an offline archive, and it is worth having. It is not
@@ -684,3 +725,84 @@ what R1 claimed.
 
 **What reopens it:** any claim, in the documents or in the product, that a compromised bundle
 cannot obtain long-term key material.
+
+## R21 - An idle lock during a ceremony discards the ceremony, and nothing is kept
+
+`IDLE_LOCK_MS` is five minutes and the pairing ceremony has no exemption from it. R17 is about
+the screen where the timer never expires; this is the screen where it does, because a ceremony
+runs on camera frames and optical decoding and none of that reads the vault, so nothing rearms
+the timer while two people are working the phones. A ceremony left standing for five minutes,
+a phone put down between turn one and turn two or a person walking off to fetch the other
+device, fires the lock under whatever is on screen: `onLock` tears down the optics and clears
+BOTH the ceremony and the session, the keys leave memory, the passphrase is forgotten and the
+half-exchanged pairing is gone. It was verified on hardware at five minutes when the camera
+release was checked (R15).
+
+**It is announced rather than silent.** `lockNotice` is the string that renders, and it says
+that any pairing that was running has been dropped and the camera released, that nothing was
+saved from it, and what does survive. So the behaviour is disclosed in the product; what was
+missing until now is a number in this register for it.
+
+**Why it is kept.** A half-done ceremony is holding the peer's card and this device's own
+ephemeral state, and a lock that preserved either would have to write key material somewhere
+the lock does not reach, which is the one promise the vault exists to make. Discarding is the
+only behaviour consistent with what a lock claims to do. The cost is bounded by the same
+property the product is built on: the two people are in the same room, because that is what
+pairing means here, so starting again costs a ceremony and nothing else.
+
+**Where it came from.** This was raised in review as F1 and carried no number, which is why
+nothing in this repository referenced it: `git grep -nw F1` found the identifier nowhere at
+all while the copy for it shipped in `src/ui/copy.ts`. A behaviour that is announced to users
+and absent from the register is exactly the gap this file exists to close.
+
+**What reopens it:** any claim that a ceremony survives a lock or can be resumed after one, or
+a change to `IDLE_LOCK_MS` short enough that the window lands inside a ceremony two people are
+actually running rather than inside one they walked away from.
+
+## R22 - A send costs two whole vault re-seals, which is about six seconds
+
+`send()` saves the vault TWICE on the success path: once after the outbox record is written
+and before the relay is called, and once inside `flush()` when the relay accepted anything.
+Every save re-seals the WHOLE vault, and the seal derives its wrap key with Argon2id at
+`ARGON2_DEFAULT`, three passes over 256 MiB, against a FRESH SALT each time. Nothing from the
+first derivation can be reused by the second, so the second costs exactly what the first did.
+
+**Measured twice, agreeing inside one percent:** 3193 ms plus 3146 ms on a Ryzen desktop,
+about 6.3 seconds of key derivation inside one successful send. The press-to-summary time
+was not measured end to end; the two derivations are what dominate it. A push the relay refuses
+costs one of them, about 3.2 seconds, because the second save happens only when something was
+relayed. The per-seal half reproduces without the app, from `client/`:
+
+    node --input-type=module -e "
+    import { argon2id } from '@noble/hashes/argon2.js';
+    const t = performance.now();
+    argon2id(new Uint8Array(8), new Uint8Array(16), { t: 3, m: 262144, p: 1, dkLen: 32 });
+    console.log(Math.round(performance.now() - t));
+    "
+
+which read 3183 and 3164 ms on the machine this entry was written on. Double it for a send.
+
+**What the person sees while it runs.** The textarea stays typable and the tab stays alive,
+because the derivation happens in the vault worker and not on the UI thread. Send, Refresh
+and the twenty second poll are all held off for the whole of it by the busy latch in
+`src/ui/app.ts`, so the screen answers and the app does not.
+
+**Why it is this way rather than an oversight.** The order of writes is the point, and
+`src/messaging.ts` records it at the top of the file: the outbox entry is persisted BEFORE
+the relay is called and never after, because the other order costs a message the relay
+accepted and this device forgot (R9). What that discipline costs in v0 is a whole-vault
+re-seal, which is the same property R18 names, seen from the sending side instead.
+
+**What would close it,** and none of it is a wording change: caching the wrap key for the
+life of an unlocked session, or sealing once per send rather than twice, or both. The first
+trades a measured delay for a derived key kept resident while the vault is unlocked, which is
+an argument about R5 and R20 rather than about latency, so it belongs to a version that can
+make that argument properly. This is v0.2 design work.
+
+**It was known and unpublished, which is the part worth recording.**
+`client/src/ui/vault-crypto.ts` states the 3.2 second measurement in its opening comment, so
+the number sat in the source the whole time. No user-facing document carried it until this
+entry.
+
+**What reopens it:** any claim that sending is fast or immediate, or any change to
+`ARGON2_DEFAULT`, which moves this number in either direction and moves nothing else.

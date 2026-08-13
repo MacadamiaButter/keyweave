@@ -337,6 +337,26 @@ not state the value is not verifiable, because a reproducer using a different on
 different bytes and cannot tell that from tampering. Put the value in the release body next
 to the hashes: see `REPRODUCIBLE-BUILD.md`.
 
+**Upload two more paths next to the bundle: `NOTICE` and `LICENSES/`.** The built bundle
+carries MIT and Apache-2.0 code, and both licenses require their text to travel with it. The
+text is NOT inside `client/dist` and that is on purpose:
+`client/test/build-no-external-origin.test.ts` permits no http(s) origin in a default build
+(residual R13) and license texts contain URLs, so emitting them into `dist/` fails that gate
+with thirteen origins. Serving them beside the bundle satisfies the licenses without putting
+an exemption into the origin wall. From the repository root, with `$APPROOT` the directory
+the app is served from:
+
+```bash
+install -m 0644 NOTICE "$APPROOT/NOTICE"
+install -d -m 0755 "$APPROOT/LICENSES"
+install -m 0644 LICENSES/*.txt "$APPROOT/LICENSES/"
+# Assert, because a silently missing legal file looks exactly like a working deployment:
+test -s "$APPROOT/NOTICE" && ls -1 "$APPROOT/LICENSES" | wc -l
+```
+
+That count must equal the number of files in `LICENSES/` in the tree you built from. These
+two paths are NOT covered by the artifact hashes, which cover `client/dist` only.
+
 Publish the hashes FIRST, and only then upload. Publishing the hash after the bytes are live
 inverts the point of it. From `v0.1.1` the hashes go in the ANNOTATED TAG MESSAGE, because that
 is what the signature covers; the GitHub release body carries the same block as a readable copy
@@ -345,6 +365,10 @@ fingerprint, the address to fetch the key from, and the `git verify-tag` invocat
 `v0.1.1` are unsigned and stay that way.
 
 ## Step 5b: the app host's response headers, IF the host can send them
+
+The vhost this step edits does not exist until something creates it: `DEPLOY-APP.md` is the
+app-host runbook that creates the docroot, this vhost, the certificate and the upload, and
+it runs the check below inside the same paste as the reload.
 
 **Conditional on option 1 above.** This step needs a host with a real nginx server block. On
 GitHub Pages, or any other host with no header configuration, SKIP IT: there is nothing to

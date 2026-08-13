@@ -8,6 +8,10 @@
 //     timing. That sentence was written once, was false, and was deleted; it does not come
 //     back (residual R3).
 //   - No claim words, no em dash (public-hygiene.test.ts).
+//   - The one security claim that must stay in index.html, the noscript notice, is
+//     DECLARED here and pinned verbatim by ui-shell.test.ts, so the markup cannot carry
+//     a claim this file's gates never read. The sentence it replaced fell through that
+//     exact hole (residual R19).
 //
 // A refusal is written as three parts on purpose: what happened, what it means, and what
 // to do instead. "Try again" is the wrong advice for every refusal in this file, and
@@ -20,6 +24,25 @@ export interface Refusal {
   readonly detail: string;
   readonly advice: string;
 }
+
+/**
+ * The one security claim that lives in index.html rather than in a screen this module
+ * renders: a <noscript> notice only ever renders when no script can run, so no runtime
+ * string can reach it. It is declared here and pinned verbatim by ui-shell.test.ts,
+ * which is what keeps the markup inside this file's gate.
+ *
+ * The sentence this replaced said the app "sends nothing to a server while you pair".
+ * That was false: beginCeremony's first await is reserveInbox(), a POST /v1/mailboxes
+ * bound to the Show and Scan buttons, recorded by execution before the first ceremony
+ * screen paints. Residual R19 names the behaviour, and its reopen condition is any
+ * claim that a refused pairing is invisible outside the two devices, which is what the
+ * old sentence was.
+ */
+export const NOSCRIPT_NOTICE =
+  'Keyweave runs entirely in your browser and needs JavaScript enabled. The keys you ' +
+  'pair with cross only the space between your two screens, but pressing Show or Scan ' +
+  'reserves an opaque drop box at the relay, so the relay learns that your network ' +
+  'address started a pairing.';
 
 export const REFUSAL_MISMATCH: Refusal = {
   title: 'Stopped: the words did not match',

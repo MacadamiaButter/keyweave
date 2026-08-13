@@ -192,6 +192,13 @@ The second command prints the signed tag message, which is where the artifact ha
 build inputs live. Read them from there rather than from the release body: that is the whole
 point of signing.
 
+**GitHub will show a signed tag as "Unverified", and that is expected.** Its API reports
+`"reason": "unknown_key"`. The signing key is deliberately not registered with the GitHub
+account, so GitHub genuinely cannot check it and says so. A badge GitHub controls would be the
+same account-anchored trust this whole section exists to move away from. The consequence worth
+knowing: `verified: false` appears both on a tag that is unsigned and on one signed by a key
+GitHub does not hold, so that field alone cannot distinguish them. `git verify-tag` can.
+
 A good result names the key and reports a good signature. gpg will also warn that the key is
 not certified with a trusted signature unless you have signed it yourself; that is expected
 and is not a failure. What matters is that the fingerprint gpg reports is character for
@@ -216,9 +223,12 @@ the problem.
 1. Open developer tools, Network tab, and reload the page.
 2. For each script and the page itself, save the response body exactly as received.
 3. `sha256sum` each file.
-4. Compare with the hashes in the signed tag message for the version the page claims, having
-   first checked that tag's signature ("Verifying the tag signature" above). An unverified
-   release body is a web page like any other.
+4. Pick the tag you intend to be running and compare with the hashes in ITS signed tag
+   message, having first checked that tag's signature ("Verifying the tag signature" above).
+   The page does not tell you which version it is, and is not asked to: a bundle reporting
+   its own version is the self-attestation refused above, so the verifier names the tag and
+   the bytes either match it or they do not. An unverified release body is a web page like
+   any other.
 
 A mismatch means the served bytes are not the released bytes. A match means they were, for
 that visit, on that machine. It says nothing about the next visit, which is why this is a
@@ -232,24 +242,27 @@ cannot be made, and a mismatch would say nothing.
 
 Owner-run, always. The agent lane stages; a person publishes.
 
-1. Tag the reviewed commit and sign the tag with the release signing key, which is the key
-   whose fingerprint is published under "Verifying the tag signature" and not a personal key.
-   Then check your own work with `git verify-tag <tag>` before going further.
-2. Decide the relay topology and export it, then run the script and capture the WHOLE output
-   block, build inputs included:
+1. Decide the relay topology and export it, then run the script at the reviewed commit and
+   capture the WHOLE output block, build inputs included:
 
    ```bash
    export KEYWEAVE_RELAY_ORIGIN=https://relay.keyweave.localfirstlab.org
-   scripts/reproduce.sh <tag>
+   scripts/reproduce.sh <commit>
    ```
 
    Set `KEYWEAVE_SAME_ORIGIN=1` instead for a same-origin release, and say so in the block:
    same-origin is a value, not a missing one. The script refuses if neither is set, so an
-   operator who meets that refusal has met a designed behaviour and not a fault.
-3. Put the whole block into the ANNOTATED TAG MESSAGE: commit, node, npm, the relay origin,
+   operator who meets that refusal has met a designed behaviour and not a fault. The tag
+   does not exist yet; the commit is what it will point at, and a build at the commit and a
+   build at a tag naming that commit check out the same tree.
+2. Put the whole block into the ANNOTATED TAG MESSAGE: commit, node, npm, the relay origin,
    and the hashes. That is what the signature covers. Hashes without the build inputs are not
-   a verifiable claim.
-4. Create the GitHub release for that tag and copy the same block into the body, as a
+   a verifiable claim. Then sign the tag with the release signing key, which is the key whose
+   fingerprint is published under "Verifying the tag signature" and not a personal key, and
+   check your own work with `git verify-tag <tag>` before going further. The block goes in
+   before signing because a signed tag message cannot be edited afterwards: changing it means
+   moving the tag, which is the one thing a verifier assumes did not happen.
+3. Create the GitHub release for that tag and copy the same block into the body, as a
    convenience for people reading in a browser. The body is editable by whoever holds the
    account, so it is a copy and never the record.
 4. Deploy the built artifact to the app host, and send the response header generated for the

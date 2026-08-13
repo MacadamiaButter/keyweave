@@ -3,9 +3,13 @@
 //
 // Defense-in-depth (must-fix #9 / anchor `defdepth`): long-term private keys are
 // held as NON-EXTRACTABLE WebCrypto CryptoKeys where the runtime supports Secure
-// Curves, so a later-served malicious bundle can only *oracle* while resident, it
-// cannot exfiltrate raw key bytes and decrypt forever offline. @noble is a LABELED
-// degraded fallback (still correct, just extractable in JS memory). Both paths are
+// Curves. That denies a later-served malicious bundle the live key HANDLE, and it
+// does NOT protect the 32-byte seeds the handles are imported from, which exist in
+// JavaScript memory while the vault is unlocked: a bundle that can run in the page
+// can read a seed and rebuild the identity offline (residual R20). What
+// non-extractability buys is narrower and real - a handle alone is an online
+// oracle while resident, never an offline archive. @noble is a LABELED degraded
+// fallback (still correct, just extractable in JS memory). Both paths are
 // exercised by the test suite.
 //
 // Seeds are the only serialized secret; they live encrypted in the vault. The live

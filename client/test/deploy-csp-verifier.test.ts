@@ -334,7 +334,7 @@ describe('no line an operator pastes is long enough to wrap', () => {
   // blocks only: prose wrapping in a terminal is harmless, a wrapped config or command line
   // is the incident. Comment lines inside a config block count too, because a wrapped
   // comment puts its tail at column zero where nginx reads it as a directive.
-  const RUNBOOKS = ['DEPLOY-CSP.md', 'DEPLOY.md', 'REPRODUCIBLE-BUILD.md'];
+  const RUNBOOKS = ['DEPLOY-APP.md', 'DEPLOY-CSP.md', 'DEPLOY.md', 'REPRODUCIBLE-BUILD.md'];
 
   it.each(RUNBOOKS)('%s', (name) => {
     const text = readFileSync(fileURLToPath(new URL(`../../docs/${name}`, import.meta.url)), 'utf8');

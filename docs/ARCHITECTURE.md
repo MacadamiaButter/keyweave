@@ -5,9 +5,12 @@ Keyweave splits the hard problem of end-to-end encryption in two:
 - **Pairing (in person, once, optical):** the trust anchor. Two devices exchange
   signed contact cards as animated QR codes. Physical proximity means there is no
   network path for a machine-in-the-middle. Verification is **SAS-with-DH**: the
-  displayed safety number folds in the X25519 Diffie-Hellman shared secret and fresh
-  signed nonces, so confirming the number proves each side holds the secret for both
-  its keys - not merely that two public keys exist.
+  displayed safety number folds the X25519 Diffie-Hellman shared secret in with both
+  sides' sorted public keys, and fresh signed nonces are exchanged and verified in
+  the same optical session, so completing the ceremony proves each side holds the
+  secret for both its keys - not merely that two public keys exist. (The number
+  itself hashes keys and DH only; the nonces live in the signed transcript, which is
+  verified before the number is ever shown.)
 
 - **Messaging (clearnet, anytime):** sealed ciphertext through a dumb store-and-forward
   mailbox relay. The relay stores opaque blobs against opaque mailbox ids; it holds no

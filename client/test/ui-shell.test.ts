@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { NOSCRIPT_NOTICE } from '../src/ui/copy.js';
 import { MIN_PASSPHRASE_LENGTH, passphraseHint } from '../src/ui/passphrase.js';
 import type { FlushReport, ReceiveReport } from '../src/messaging.js';
 
@@ -241,6 +242,31 @@ describe('the copy is held to the honesty rules', () => {
     expect(banner).toMatch(/matching words/i);
     // Shown during the ceremony, hidden elsewhere: setChrome is the only thing that toggles it.
     expect(appSource).toContain('setHidden(this.tcb, !ceremonyVisible)');
+  });
+
+  it('the noscript notice is the declared one, verbatim, and the retracted claim stays gone', () => {
+    // index.html sits outside copy.ts, which is the one file the honesty gates read, and
+    // that is the hole the old sentence fell through: "It sends nothing to a server while
+    // you pair" shipped in the signed v0.1.1 tag while reserveInbox() POSTs /v1/mailboxes
+    // on the same button press (proven by execution; residual R19 is the honest statement).
+    // A <noscript> notice cannot be rendered from copy.ts at runtime, so the pin runs the
+    // other way: the claim is DECLARED in copy.ts and the markup must carry it verbatim.
+    const start = html.indexOf('<noscript>');
+    expect(start).toBeGreaterThan(-1);
+    const block = html.slice(start, html.indexOf('</noscript>', start));
+    expect(block.replace(/\s+/g, ' ')).toContain(NOSCRIPT_NOTICE);
+
+    // The retracted claim does not come back, in any whitespace shape, anywhere in the
+    // shell or the UI sources. Negative control first, so a green run means the pattern
+    // is looking rather than toothless.
+    const retracted = /sends\s+nothing to a server/i;
+    expect(retracted.test('It sends\n            nothing to a server while you pair.')).toBe(true);
+    for (const rel of ['index.html', ...uiFiles()]) {
+      const source = prose(rel);
+      expect(retracted.test(source), `${rel} still carries the retracted noscript claim`).toBe(
+        false,
+      );
+    }
   });
 
   it('nothing claims the relay cannot link two mailboxes', () => {

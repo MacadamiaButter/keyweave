@@ -13,15 +13,18 @@ This product includes / will include third-party software:
   a re-vendor is a fresh full-history audit.
 
 - @noble/curves, @noble/ciphers, @noble/hashes (https://github.com/paulmillr/noble-*)
-  MIT License. Used for Ed25519, X25519, XChaCha20-Poly1305, HKDF, Argon2id where
+  MIT License, Copyright (c) 2022 Paul Miller; @noble/ciphers additionally Copyright (c)
+  2016 Thomas Pornin. Used for Ed25519, X25519, XChaCha20-Poly1305, HKDF, Argon2id where
   the platform WebCrypto does not natively cover the primitive. External audit of
   record: Cure53, September 2024, at v1.6.0 (scope includes ed25519 and X25519);
-  later versions are self-audited. Version-precise claims only.
+  later versions are self-audited. Version-precise claims only. Full texts:
+  LICENSES/MIT-noble-curves.txt, LICENSES/MIT-noble-ciphers.txt,
+  LICENSES/MIT-noble-hashes.txt.
 
 - zxing-wasm 2.2.4 (https://github.com/Sec-ant/zxing-wasm)
   MIT License, Copyright (c) 2023 Ze-Zheng Wu. The JavaScript wrapper around the QR
   decoder. Its published tarball ships exactly one license file, that MIT text, and it
-  covers the wrapper only.
+  covers the wrapper only. Full text: LICENSES/MIT-zxing-wasm.txt.
 
 - zxing-cpp (https://github.com/zxing-cpp/zxing-cpp), bundled inside zxing-wasm
   Apache License 2.0. zxing-wasm's dist/reader/zxing_reader.wasm is compiled from
@@ -35,21 +38,48 @@ This product includes / will include third-party software:
   Keyweave imports; taking the writer or full build would add that attribution.
 
 - qrcode 1.5.4 (https://github.com/soldair/node-qrcode)
-  MIT License. QR symbol generation on the sender side. Its browser entry point reaches
-  one runtime transitive dependency, dijkstrajs 1.0.3 (MIT).
+  MIT License, Copyright (c) 2012 Ryan Day. QR symbol generation on the sender side. Its
+  browser entry point reaches one runtime transitive dependency, dijkstrajs 1.0.3 (MIT,
+  Copyright (C) 2008 Wyatt Baldwin). Full texts: LICENSES/MIT-qrcode.txt,
+  LICENSES/MIT-dijkstrajs.txt.
 
 - cbor2 2.3.0 (https://github.com/hildjj/cbor2)
-  MIT License. Deterministic CBOR encoding and strict decoding. It is not a peripheral
+  MIT License, Copyright (c) 2023 Joe Hildebrand. Deterministic CBOR encoding and strict
+  decoding. It is not a peripheral
   dependency: every wire and at-rest structure in Keyweave goes through it, including the
   signed contact card, the mailbox coordinate, the sealed envelope and the vault blob, so
-  the bytes a signature covers are the bytes this library produced.
+  the bytes a signature covers are the bytes this library produced. Full text:
+  LICENSES/MIT-cbor2.txt.
 
 - @cto.af/wtf8 0.0.5 (https://github.com/hildjj/wtf8)
-  MIT License. cbor2's sole runtime dependency, and it does ship: cbor2's encoder and its
+  MIT License, Copyright 2025 The @cto.af/wtf8 Authors and Contributors. cbor2's sole
+  runtime dependency, and it does ship: cbor2's encoder and its
   type table both import it at module scope, so it is not tree-shaken away, and the built
   bundle contains it. Listed separately rather than folded into the line above because an
   attribution that names only the direct dependency understates what is being distributed.
+  Full text: LICENSES/MIT-cto.af-wtf8.txt.
 
 Keyweave does not stamp a blanket SPDX identifier onto built artifacts: the bundle carries
 Apache-2.0 material alongside MIT, and a single MIT banner over both would misstate the
 license of the decoder.
+
+LICENSES/ holds the full text of every license the built bundle is under, one file per
+package, copied verbatim from the package as installed. The rule that produced that
+directory is the zxing-cpp argument above applied to the MIT dependencies rather than only
+to the Apache one: MIT requires its permission notice and copyright line to accompany the
+software, and a package that ships a LICENSE file into node_modules has not shipped it to
+anyone we later hand a bundle to. One deliberate exception: decimen-optical-transfer is not
+duplicated here, because its LICENSE is already preserved verbatim in this tree at
+client/vendor/decimen/LICENSE, which the entry above says and a reader can check.
+
+WHERE THESE TEXTS LIVE IN A DEPLOYMENT, AND IT IS NOT INSIDE THE BUNDLE. NOTICE and
+LICENSES/ are uploaded ALONGSIDE client/dist rather than emitted into it. The reason is a
+collision between two rules that are both right: client/test/build-no-external-origin.test.ts
+scans every emitted byte for an http(s) origin and permits none in a default build (residual
+R13), and license texts carry URLs. Measured, by emitting both paths into a scratch build
+and running the gate's own scan over it: thirteen origins, from apache.org, paulmillr.com,
+opensource.org and the github.com links in this file. Neither side can give way honestly -
+the license text is verbatim by obligation, and an origin scan with an exemption list is a
+weaker wall than one without - so the legal text is served next to the bundle instead. The
+consequence worth stating: these files are NOT covered by the artifact hashes a release
+publishes, which cover client/dist only. docs/DEPLOY.md step 5 carries the upload.

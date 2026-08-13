@@ -34,7 +34,24 @@ const TEXT_EXT = /\.(ts|js|mjs|cjs|json|md|py|sh|conf|service|html|css|txt|yml|y
 // Third-party text we carry verbatim. Nothing outside this list is exempt.
 const VENDOR_PREFIXES = ['client/vendor/', 'LICENSES/'];
 // Machine-generated or upstream-sourced files we do not hand-edit.
-const GENERATED = new Set(['client/package-lock.json', 'client/src/bip39-english.ts', 'LICENSE']);
+//
+// The two LICENSE texts here are named ONE BY ONE rather than as a `LICENSES/` prefix, and
+// that is the whole point of writing them out: the rest of that directory is still scanned,
+// so a file dropped in there later gets read like any other. Each of these carries an
+// upstream author's own contact address inside a permission notice that MIT requires us to
+// reproduce unaltered. The addresses are NOT quoted here, for the reason the samples below
+// are assembled from pieces: this file scans itself, so a comment that spells one out is
+// reported by the very rule it is explaining. What they are is upstream's identity,
+// published by upstream, and that is the one thing the forbidden-identifier rules are not
+// about; the alternative is editing a license text, which is the obligation those files
+// exist to discharge in the first place.
+const GENERATED = new Set([
+  'client/package-lock.json',
+  'client/src/bip39-english.ts',
+  'LICENSE',
+  'LICENSES/MIT-noble-ciphers.txt',
+  'LICENSES/MIT-dijkstrajs.txt',
+]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -286,6 +303,20 @@ describe('public hygiene', () => {
         expect(rule.find(ok), `${rule.what} matched ${ok}`).toBeNull();
       }
     }
+
+    // An exemption that has outlived its cause is a permanent hole in the shape of a comment,
+    // which is why the placeholder rule below asserts its own. The two license texts in
+    // GENERATED are skipped because a verbatim MIT notice names its author; if one of them
+    // stops existing, or stops carrying the address the exemption was written for, delete the
+    // entry rather than leaving a skip nobody can account for.
+    const mailRule = FORBIDDEN.find((r) => r.what === 'a personal mail address');
+    expect(mailRule, 'the rule these exemptions exist for is gone').toBeDefined();
+    for (const rel of ['LICENSES/MIT-noble-ciphers.txt', 'LICENSES/MIT-dijkstrajs.txt']) {
+      expect(GENERATED.has(rel), `${rel} is not actually exempted`).toBe(true);
+      expect(files, `exempted license text is gone: ${rel}`).toContain(rel);
+      const text = readFileSync(join(REPO_ROOT, rel), 'utf8');
+      expect(mailRule!.find(text), `${rel} no longer needs its exemption`).not.toBeNull();
+    }
   });
 
   it('no forbidden identifiers in anything this repository publishes', () => {
@@ -303,7 +334,9 @@ describe('public hygiene', () => {
       // Generated files are skipped, and NOT for the vendor reason: client/package-lock.json
       // is a wall of base64 integrity hashes, where a two-character pattern matches noise
       // sooner or later. Nothing hand-writes those files, so nothing hand-writes a machine
-      // name into one. client/vendor/** is scanned.
+      // name into one. The two license texts in that set are skipped for the separate reason
+      // stated where the set is defined, and the rest of LICENSES/ is scanned, as is
+      // client/vendor/**.
       if (GENERATED.has(rel)) continue;
       const text = readFileSync(join(REPO_ROOT, rel), 'utf8');
       for (const rule of FORBIDDEN) {
