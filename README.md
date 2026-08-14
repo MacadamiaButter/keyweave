@@ -19,7 +19,8 @@ The app is live at **https://keyweave.localfirstlab.org**. That URL is the appli
 not a page about it: it serves the v0.1.2 bundle, and on 2026-08-13 the bytes it served were
 checked file by file against the hashes in the signed `v0.1.2` tag. Its relay runs on a separate
 host at `https://relay.keyweave.localfirstlab.org` and answers only under `/v1/`, so a plain
-`GET /` there returns 404 by design and is not an outage.
+`GET /` there returns 404 by design and is not an outage. An illustrated explanation, which is a
+page about it, lives at https://localfirstlab.org/keyweave.html.
 
 Pairing needs two devices in the same room, each with a camera and a screen, both with the app
 open: one shows the animated symbol while the other scans it, then the two swap roles, and both
@@ -40,6 +41,40 @@ things are worth knowing before you start.
 - **Pressing Show or Scan reserves a drop box at the relay** before anyone has decided anything, so
   the relay learns that a network address began a pairing at that moment, even for ceremonies the
   two people then refuse. It learns no identity and reads no plaintext. That is R19.
+
+## What pairing looks like
+
+These are captures of the app itself and not mock-ups.
+[docs/media/PROVENANCE.md](docs/media/PROVENANCE.md) records, for each one, what was real in the
+capture and what was a headless browser standing in for a person.
+
+![An animated QR code whose pattern changes several times a second and shifts to a slightly finer grid each time the display moves to its other stream.](docs/media/keyweave-pairing.gif)
+
+The code as it actually plays, recorded from the running app: 96 different codes in 9.6 seconds
+and three switches between the two streams it alternates, so a camera that misses frames still
+finishes the turn. One device shows this while the other watches it, then the two swap.
+
+![A dark phone-sized screen headed "Say these six words out loud", listing six numbered words above the buttons "The words match" and "They do not match".](docs/media/keyweave-compare.png)
+
+Both screens derive six words from the two keys, and reading them to each other is the trust
+decision: everything Keyweave does afterwards rests on it. From a real ceremony on 2026-08-10
+between two instances passing real codes over a virtual camera, where both screens did show these
+same six words.
+
+![A dark phone-sized screen headed "Paired", showing the other party's identity key, a card serial of 1, and an "Open the conversation" button.](docs/media/keyweave-paired.png)
+
+Agreeing pins that key on the device, and a different card for the same identity will need
+another ceremony in person.
+
+![A dark phone-sized screen with a red heading "Stopped: the words did not match", two paragraphs of explanation, and a "Start over" button.](docs/media/keyweave-refused.png)
+
+The other ending, from the same day's run with a third instance sitting between the two sides and
+pairing with each of them as itself, which is why those screens showed different words. Nothing
+was saved and no contact was added, though the relay had already seen a pairing begin, which is
+R19 above.
+
+Three more screens, and the still frame shown in place of the animation when a browser asks for
+reduced motion, are in [docs/media/](docs/media/).
 
 ## What Keyweave protects, and what it does not
 
